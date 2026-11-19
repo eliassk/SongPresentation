@@ -23,7 +23,7 @@ function baseProfile(overrides) {
       size: 56,
       maxSize: 96,
       minSize: 16,
-      lineHeight: 1.24,
+      lineHeight: 1.45,
       shadow: true,
       secondaryColor: '#cfcfcf',
       perLanguage: {
