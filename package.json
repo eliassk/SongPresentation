@@ -37,7 +37,8 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "identity": "SEBASTIAN KĘDZIOR (Q9SMQCVNWJ)"
     },
     "directories": {
       "output": "release"
