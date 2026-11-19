@@ -45,7 +45,7 @@ function baseProfile(overrides) {
     },
     area: { x: 0, y: 0, w: 100, h: 100 },
     background: { type: 'color', color: '#111111' },
-    transitionMs: 250,
+    transitionMs: 0,
     showVerseLabel: true,
     missingLanguage: 'fallbackSingle',
     ...overrides,
