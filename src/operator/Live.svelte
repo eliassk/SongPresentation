@@ -41,6 +41,14 @@
     const s = q.trim().toLowerCase();
     const base = s ? app.songs : app.songs.filter((x) => x.collectionKey === collection);
     if (!s) return base;
+    // "dp112", "dp 112" or "DP 11" search one collection by number prefix.
+    const m = s.match(/^([a-zæøåąćęłńóśźż]+)\s*(\d+)$/i);
+    if (m) {
+      const hits = app.songs.filter(
+        (x) => x.collectionKey?.toLowerCase() === m[1] && x.number != null && String(x.number).startsWith(m[2]),
+      );
+      if (hits.length) return hits.sort((a, b) => (a.number === Number(m[2]) ? -1 : b.number === Number(m[2]) ? 1 : 0));
+    }
     return base.filter((x) => x.search.includes(s));
   });
 
