@@ -34,6 +34,70 @@
     });
   });
 
+  // Direct manipulation in the preview. Drag distances are converted to canvas pixels.
+  let previewEl = $state<HTMLDivElement>();
+  type DragKind = 'numberSize' | 'creditsSize' | 'text' | 'move' | 'nw' | 'se';
+  let drag: { kind: DragKind; x0: number; y0: number; start: number; area: Profile['area'] } | null = null;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  function beginDrag(kind: DragKind, e: PointerEvent) {
+    if (!draft) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const textKey = draft.text.autoFit ? 'maxSize' : 'size';
+    const start = kind === 'numberSize' ? draft.header.numberSize : kind === 'creditsSize' ? draft.header.creditsSize : draft.text[textKey];
+    drag = { kind, x0: e.clientX, y0: e.clientY, start, area: { ...draft.area } };
+    window.addEventListener('pointermove', onDrag);
+    window.addEventListener('pointerup', endDrag, { once: true });
+  }
+
+  function onDrag(e: PointerEvent) {
+    if (!drag || !draft || !previewEl) return;
+    const scale = previewEl.getBoundingClientRect().width / draft.width;
+    const dx = (e.clientX - drag.x0) / scale;
+    const dy = (e.clientY - drag.y0) / scale;
+    const px = (dx / draft.width) * 100;
+    const py = (dy / draft.height) * 100;
+    const grow = (dx - dy) * 0.25; // up or right grows
+    const a = drag.area;
+    switch (drag.kind) {
+      case 'numberSize':
+        draft.header.numberSize = Math.round(clamp(drag.start + grow, 30, 300));
+        break;
+      case 'creditsSize':
+        draft.header.creditsSize = Math.round(clamp(drag.start + grow * 0.5, 12, 80));
+        break;
+      case 'text':
+        draft.text[draft.text.autoFit ? 'maxSize' : 'size'] = Math.round(clamp(drag.start + grow * 0.5, 12, 240));
+        break;
+      case 'move':
+        draft.area = { ...a, x: Math.round(clamp(a.x + px, 0, 100 - a.w)), y: Math.round(clamp(a.y + py, 0, 100 - a.h)) };
+        break;
+      case 'se':
+        draft.area = { ...a, w: Math.round(clamp(a.w + px, 10, 100 - a.x)), h: Math.round(clamp(a.h + py, 10, 100 - a.y)) };
+        break;
+      case 'nw': {
+        const x = Math.round(clamp(a.x + px, 0, a.x + a.w - 10));
+        const y = Math.round(clamp(a.y + py, 0, a.y + a.h - 10));
+        draft.area = { x, y, w: a.w + a.x - x, h: a.h + a.y - y };
+        break;
+      }
+    }
+  }
+
+  function endDrag() {
+    drag = null;
+    window.removeEventListener('pointermove', onDrag);
+  }
+
+  // Elements inside the rendered display that can be dragged to resize.
+  function onPreviewDown(e: PointerEvent) {
+    const t = e.target as HTMLElement;
+    if (t.closest('.num, .ckey')) beginDrag('numberSize', e);
+    else if (t.closest('.credits')) beginDrag('creditsSize', e);
+    else if (t.closest('.body')) beginDrag('text', e);
+  }
+
   // Push every edit live to all displays.
   $effect(() => {
     if (!draft) return;
@@ -169,6 +233,10 @@
             <button onclick={() => toggleLang(l.code)}>+ {l.name}</button>
           {/each}
         </div>
+        <div class="row">
+          <label class="inline"><input type="checkbox" checked={!!draft.text.secondaryColor} onchange={(e) => (draft!.text.secondaryColor = e.currentTarget.checked ? '#cfcfcf' : '')} /> Second language in its own colour</label>
+          {#if draft.text.secondaryColor}<input type="color" bind:value={draft.text.secondaryColor} />{/if}
+        </div>
         <label class="inline">
           Missing translation
           <select bind:value={draft.missingLanguage}>
@@ -278,7 +346,8 @@
         <h2 class="grow">Preview · {draft.width}×{draft.height} {st.liveSong ? '(live song)' : '(sample)'}</h2>
         <button onclick={resetLayout}>Reset layout</button>
       </div>
-      <div class="preview" style:aspect-ratio="{draft.width} / {draft.height}">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="preview editable" bind:this={previewEl} onpointerdown={onPreviewDown} style:aspect-ratio="{draft.width} / {draft.height}">
         <Stage profile={draft} song={previewSong} slideIndex={st.liveSong ? st.live.slideIndex : 0} checker />
         <div
           class="areaframe"
@@ -286,9 +355,16 @@
           style:top="{draft.area.y}%"
           style:width="{draft.area.w}%"
           style:height="{draft.area.h}%"
-        ></div>
+        >
+          <div class="grip" title="Drag to move the text area" onpointerdown={(e) => beginDrag('move', e)}>Text area</div>
+          <div class="corner nw" title="Drag to resize" onpointerdown={(e) => beginDrag('nw', e)}></div>
+          <div class="corner se" title="Drag to resize" onpointerdown={(e) => beginDrag('se', e)}></div>
+        </div>
       </div>
-      <p class="muted small">Changes go live to every screen showing this profile.</p>
+      <p class="muted small">
+        Drag the song number, credits or lyrics up/right to enlarge, down/left to shrink. Drag the frame's label to move the text area, its corners to resize.
+        Changes go live to every screen showing this profile.
+      </p>
     </section>
   {/if}
 </div>
@@ -312,7 +388,33 @@
   .urls code { font-size: 12px; color: var(--accent); word-break: break-all; }
   .urls button { padding: 2px 8px; }
   .preview { position: relative; }
-  .areaframe { position: absolute; border: 1px dashed rgba(233, 196, 106, 0.8); pointer-events: none; border-radius: 2px; }
+  .areaframe { position: absolute; border: 1px dashed rgba(233, 196, 106, 0.85); pointer-events: none; border-radius: 2px; }
+  .grip {
+    position: absolute;
+    left: -1px;
+    top: -22px;
+    pointer-events: auto;
+    cursor: move;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1d1c1a;
+    background: #e9c46a;
+    border-radius: 4px 4px 0 0;
+    padding: 3px 8px;
+    user-select: none;
+  }
+  .corner { position: absolute; width: 12px; height: 12px; background: #e9c46a; border: 2px solid #1d1c1a; border-radius: 3px; pointer-events: auto; }
+  .corner.nw { left: -7px; top: -7px; cursor: nwse-resize; }
+  .corner.se { right: -7px; bottom: -7px; cursor: nwse-resize; }
+  .editable { user-select: none; touch-action: none; overflow: visible !important; margin-top: 22px; }
+  .editable :global(.num), .editable :global(.ckey), .editable :global(.credits), .editable :global(.body) {
+    cursor: ns-resize;
+    border-radius: 4px;
+    transition: outline-color 120ms;
+    outline: 2px solid transparent;
+    outline-offset: 4px;
+  }
+  .editable :global(.num:hover), .editable :global(.credits:hover), .editable :global(.body:hover) { outline-color: rgba(233, 196, 106, 0.6); }
   .preview { width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #000; }
   .small { font-size: 12px; margin: 0; }
 </style>

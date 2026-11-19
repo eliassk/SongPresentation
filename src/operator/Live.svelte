@@ -353,7 +353,15 @@
     gap: 16px;
     padding: 16px;
   }
+  @media (max-width: 1440px) {
+    .live { grid-template-columns: 250px minmax(0, 1fr) 360px; gap: 12px; padding: 12px; }
+    .info { gap: 16px; padding: 18px 20px; }
+    .bignum { font-size: 36px; }
+    .title { font-size: 22px; }
+  }
   .col { overflow: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 2px; }
+  /* Cards MUST keep their height; the column scrolls instead. Only the song list flexes. */
+  .col > .card { flex-shrink: 0; }
   .pad { padding: 14px 16px; }
   .stack { display: flex; flex-direction: column; gap: 10px; }
   .small { font-size: 12px; }
@@ -385,7 +393,7 @@
   .search kbd { position: absolute; right: 8px; }
   .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }
 
-  .list { flex: 1; min-height: 200px; overflow: auto; padding: 6px; }
+  .col > .list { flex: 1 1 0; flex-shrink: 1; min-height: 200px; overflow: auto; padding: 6px; }
   .item { display: flex; gap: 2px; border-radius: 8px; transition: background 120ms var(--ease); }
   .item:hover { background: var(--panel-2); }
   .item button { background: transparent; border-color: transparent; }

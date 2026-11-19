@@ -103,7 +103,7 @@
 </script>
 
 <div class="st">
-  <h2>SongTreasures</h2>
+  <h2 class="nomargin">SongTreasures</h2>
   {#if available && (cfg?.collections.length || app.songs.some((x) => x.id.startsWith('st:')))}
     <div class="sync">
       <button class="primary" disabled={status.running} onclick={resync}>{status.running ? 'Working…' : 'Check for updates'}</button>
@@ -152,8 +152,9 @@
 </div>
 
 <style>
+  .nomargin { margin: 0; }
   .sync { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-  .st { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .st { display: flex; flex-direction: column; gap: 8px; }
   .cols { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow: auto; }
   label { display: flex; gap: 6px; align-items: center; font-size: 13px; }
   .small { font-size: 12px; margin: 0; }

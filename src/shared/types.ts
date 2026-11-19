@@ -62,6 +62,8 @@ export interface Profile {
     minSize: number;
     lineHeight: number;
     shadow: boolean;
+    /** Colour for every column after the first. Empty uses the language's own colour. */
+    secondaryColor: string;
     perLanguage: Record<LangCode, LangStyle>;
   };
   header: {

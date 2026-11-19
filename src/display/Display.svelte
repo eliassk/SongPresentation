@@ -137,7 +137,7 @@
                 class="inner"
                 class:labelled={profile.showVerseLabel}
                 style:text-align={profile.layout.textAlign}
-                style:color={s.color}
+                style:color={i > 0 && profile.text.secondaryColor ? profile.text.secondaryColor : s.color}
                 style:font-style={s.italic ? 'italic' : 'normal'}
                 style:font-weight={s.weight}
                 style:font-size="calc(var(--fs) * {s.scale})"
