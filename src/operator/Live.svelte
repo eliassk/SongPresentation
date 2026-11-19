@@ -44,7 +44,23 @@
     });
   });
 
+  // Per-operator preference, so it lives in localStorage.
+  const readFollow = () => {
+    try {
+      return localStorage.getItem('followSelection') === '1';
+    } catch {
+      return false;
+    }
+  };
+  let follow = $state(readFollow());
+  $effect(() => {
+    try {
+      localStorage.setItem('followSelection', follow ? '1' : '0');
+    } catch {}
+  });
+
   async function select(id: string) {
+    if (follow && id !== st.live.songId) link.send('setLive', { songId: id });
     selected = await getSong(id);
   }
 
@@ -121,6 +137,9 @@
         <button type="submit">Go</button>
       </form>
       <input id="search" placeholder="Search all collections… ( / )" bind:value={q} />
+      <label class="follow" title="Clicking a song puts it on the screens immediately">
+        <input type="checkbox" bind:checked={follow} /> Screens follow selection
+      </label>
     </div>
 
     <div class="card list">
@@ -284,6 +303,7 @@
   .nomargin { margin: 0; }
   .center { text-align: center; }
 
+  .follow { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
   .list { flex: 1; min-height: 180px; overflow: auto; padding: 6px; }
   .item { display: flex; gap: 2px; border-radius: 6px; }
   .item button { background: transparent; border-color: transparent; padding: 5px 8px; }
