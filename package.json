@@ -1,0 +1,49 @@
+{
+  "name": "song-presentation",
+  "productName": "SongPresentation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bilingual song lyrics presentation for LAN displays and OBS.",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n vite,app \"vite build --watch --mode development\" \"wait-on dist/index.html dist/display.html && electron .\"",
+    "server": "vite build && node server/server.cjs",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "dist:win": "vite build && electron-builder --win",
+    "dist:mac": "vite build && electron-builder --mac"
+  },
+  "build": {
+    "appId": "no.koach.songpresentation",
+    "productName": "SongPresentation",
+    "files": [
+      "electron/**",
+      "server/**",
+      "dist/**",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/node": "^26.6.6",
+    "concurrently": "^10.0.7",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
+    "svelte": "^5.58.0",
+    "svelte-check": "^4.7.8",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8",
+    "wait-on": "^9.5.1"
+  }
+}
