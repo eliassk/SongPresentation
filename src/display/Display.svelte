@@ -13,38 +13,41 @@
   let keys = $derived(slideKeys(song));
   let key = $derived(keys.length ? keys[Math.min(slideIndex, keys.length - 1)] : null);
 
-  let langs = $derived.by(() => {
-    if (!song || !key) return [];
+  const langsFor = (k: string | null) => {
+    if (!song || !k) return [];
     if (profile.missingLanguage === 'empty') return profile.languages;
-    return profile.languages.filter((l) => song.lyrics[l]?.[key!]?.length);
-  });
+    return profile.languages.filter((l) => song.lyrics[l]?.[k]?.length);
+  };
+  let langs = $derived(langsFor(key));
 
-  let gridTemplate = $derived.by(() => {
-    const n = Math.max(langs.length, 1);
+  const gridFor = (ls: string[]) => {
+    const n = Math.max(ls.length, 1);
     const tracks = n === 2 ? `${profile.layout.ratio}fr ${1 - profile.layout.ratio}fr` : `repeat(${n}, 1fr)`;
     return profile.layout.mode === 'columns'
       ? `grid-template-columns:${tracks};grid-template-rows:1fr`
       : `grid-template-rows:${tracks};grid-template-columns:1fr`;
-  });
+  };
 
   let title = $derived(
     song ? [...new Set(profile.languages.map((l) => song.title?.[l]).filter(Boolean))].join('  ·  ') : '',
   );
   let creditLines = $derived(song ? credits(song, profile.languages[0] ?? 'en') : ['', '']);
 
-  let body = $state<HTMLDivElement>();
+  // One size per song: every slide is fitted off-screen, the smallest wins.
+  // Per-slide fitting made the text jump between verses.
+  let measure = $state<HTMLDivElement>();
   let fontSize = $state(48);
 
   async function fit() {
     await tick();
     const t = profile.text;
-    if (!t.autoFit || !body) {
+    if (!t.autoFit || !measure) {
       fontSize = t.size;
       return;
     }
-    const cols = [...body.querySelectorAll<HTMLElement>('.inner')];
+    const cols = [...measure.querySelectorAll<HTMLElement>('.inner')];
     const fits = (s: number) => {
-      body!.style.setProperty('--fs', s + 'px');
+      measure!.style.setProperty('--fs', s + 'px');
       return cols.every((c) => {
         const box = c.parentElement!;
         return c.scrollHeight <= box.clientHeight + 1 && c.scrollWidth <= box.clientWidth + 1;
@@ -59,16 +62,14 @@
         if (fits(mid)) lo = mid;
         else hi = mid;
       }
-    body.style.setProperty('--fs', lo + 'px');
     fontSize = lo;
   }
 
   $effect(() => {
-    // Re-fit on any change of profile, slide or text.
+    // Re-fit when the profile or song changes. Slide changes reuse the size.
     JSON.stringify(profile);
-    void key;
-    void langs;
     void song;
+    void blank;
     fit();
     document.fonts?.ready.then(fit);
   });
@@ -76,6 +77,45 @@
   const style = (l: string) => profile.text.perLanguage[l] ?? defaultLangStyle();
   const h = $derived(profile.header);
 </script>
+
+{#snippet slideBody(k: string, hidden: boolean)}
+  {@const ls = langsFor(k)}
+  <div
+    class="body"
+    class:hidden
+    style="{gridFor(ls)};gap:{profile.layout.gap}px;padding:{profile.layout.padding}px;{hidden ? '' : `--fs:${fontSize}px;`}animation-duration:{profile.transitionMs}ms"
+  >
+    {#each ls as l, i (l)}
+      {@const s = style(l)}
+      <div
+        class="col"
+        class:divided={profile.layout.divider && i > 0}
+        class:stacked={profile.layout.mode === 'stacked'}
+        style:--divider={profile.layout.dividerColor}
+        style:--half-gap="{profile.layout.gap / 2}px"
+        style:justify-content={profile.layout.align === 'top' ? 'flex-start' : profile.layout.align === 'bottom' ? 'flex-end' : 'center'}
+      >
+        <div
+          class="inner"
+          class:labelled={profile.showVerseLabel && song!.number != null}
+          style:text-align={profile.layout.textAlign}
+          style:color={i > 0 && profile.text.secondaryColor ? profile.text.secondaryColor : s.color}
+          style:font-style={s.italic ? 'italic' : 'normal'}
+          style:font-weight={s.weight}
+          style:font-size="calc(var(--fs) * {s.scale})"
+          style:line-height={profile.text.lineHeight}
+        >
+          {#if profile.showVerseLabel && song!.number != null}<div class="label">{verseLabel(k)}</div>{/if}
+          <div class="lines">
+            {#each song!.lyrics[l]?.[k] ?? [] as line}
+              <div class="line">{line}</div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    {/each}
+  </div>
+{/snippet}
 
 <div
   class="root"
@@ -117,43 +157,16 @@
         </header>
       {/if}
 
-      {#key `${song.id}:${slideIndex}`}
-        <div
-          class="body"
-          bind:this={body}
-          style="{gridTemplate};gap:{profile.layout.gap}px;padding:{profile.layout.padding}px;--fs:{fontSize}px;animation-duration:{profile.transitionMs}ms"
-        >
-          {#each langs as l, i (l)}
-            {@const s = style(l)}
-            <div
-              class="col"
-              class:divided={profile.layout.divider && i > 0}
-              class:stacked={profile.layout.mode === 'stacked'}
-              style:--divider={profile.layout.dividerColor}
-              style:--half-gap="{profile.layout.gap / 2}px"
-              style:justify-content={profile.layout.align === 'top' ? 'flex-start' : profile.layout.align === 'bottom' ? 'flex-end' : 'center'}
-            >
-              <div
-                class="inner"
-                class:labelled={profile.showVerseLabel && song.number != null}
-                style:text-align={profile.layout.textAlign}
-                style:color={i > 0 && profile.text.secondaryColor ? profile.text.secondaryColor : s.color}
-                style:font-style={s.italic ? 'italic' : 'normal'}
-                style:font-weight={s.weight}
-                style:font-size="calc(var(--fs) * {s.scale})"
-                style:line-height={profile.text.lineHeight}
-              >
-                {#if profile.showVerseLabel && song.number != null}<div class="label">{verseLabel(key)}</div>{/if}
-                <div class="lines">
-                  {#each song.lyrics[l]?.[key] ?? [] as line}
-                    <div class="line">{line}</div>
-                  {/each}
-                </div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      {/key}
+      <div class="stage">
+        {#key `${song.id}:${slideIndex}`}
+          {@render slideBody(key, false)}
+        {/key}
+        {#if profile.text.autoFit}
+          <div class="measure" bind:this={measure} aria-hidden="true">
+            {#each keys as k (k)}{@render slideBody(k, true)}{/each}
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
@@ -207,12 +220,26 @@
     opacity: 0.78;
     letter-spacing: 0.01em;
   }
-  .body {
+  .stage {
     flex: 1;
     min-height: 0;
+    position: relative;
+  }
+  .body {
+    position: absolute;
+    inset: 0;
     display: grid;
     animation-name: fadein;
     animation-timing-function: ease-out;
+  }
+  .measure {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .body.hidden {
+    animation: none;
   }
   @keyframes fadein {
     from { opacity: 0; }
@@ -242,8 +269,12 @@
     border-left: none;
     border-top: 2px solid var(--divider);
   }
+  /* Words MUST NOT break mid-word: an overflowing word shrinks the text instead. */
   .inner {
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
+  }
+  .line {
+    text-wrap: pretty;
   }
   .inner.labelled {
     display: grid;

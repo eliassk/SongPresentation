@@ -387,9 +387,9 @@
   }
   @media (max-width: 1440px) {
     .live { grid-template-columns: 250px minmax(0, 1fr) 360px; gap: 12px; padding: 12px; }
-    .info { gap: 16px; padding: 18px 20px; }
-    .bignum { font-size: 36px; }
-    .title { font-size: 22px; }
+    .info { gap: 14px; padding: 12px 16px; }
+    .bignum { font-size: 28px; }
+    .title { font-size: 18px; }
   }
   .col { overflow: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 2px; }
   /* Cards MUST keep their height; the column scrolls instead. Only the song list flexes. */
@@ -446,14 +446,14 @@
 
   .cardhead { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
   .collection { color: var(--accent-ink); font-size: 15px; font-weight: 500; text-align: center; }
-  .info { display: flex; gap: 22px; padding: 22px 26px 24px; align-items: flex-start; }
-  .bignum { font-size: 44px; font-weight: 700; color: #a8a196; line-height: 1; letter-spacing: -0.03em; min-width: 1.4em; }
-  .meta { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .title { font-size: 25px; font-weight: 700; line-height: 1.2; margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
-  .subtitle { font-size: 16px; color: var(--accent-ink); }
-  .facts { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; color: var(--muted); font-size: 14px; }
-  .chip { background: var(--panel-2); border-radius: 6px; padding: 2px 8px; color: var(--text-2); }
-  .golive { padding: 10px 16px; font-size: 15px; border-radius: var(--radius); }
+  .info { display: flex; gap: 16px; padding: 14px 20px; align-items: flex-start; }
+  .bignum { font-size: 32px; font-weight: 700; color: #a8a196; line-height: 1; letter-spacing: -0.03em; min-width: 1.4em; }
+  .meta { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .title { font-size: 20px; font-weight: 700; line-height: 1.2; margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
+  .subtitle { font-size: 14px; color: var(--accent-ink); }
+  .facts { display: flex; flex-wrap: wrap; column-gap: 14px; row-gap: 2px; margin-top: 6px; color: var(--muted); font-size: 13px; }
+  .chip { background: var(--panel-2); border-radius: 6px; padding: 1px 6px; color: var(--text-2); }
+  .golive { padding: 8px 14px; font-size: 14px; border-radius: var(--radius); }
 
   .toggleall { color: var(--text-2); font-size: 13px; }
   .check {
