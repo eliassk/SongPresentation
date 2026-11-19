@@ -165,7 +165,7 @@
     <h2>Display profiles</h2>
     {#each st.profiles as p (p.id)}
       <button class="name" class:sel={p.id === selectedId} onclick={() => (selectedId = p.id)}>
-        {p.name} <span class="muted">{p.width}×{p.height}</span>
+        <span class="pname">{p.name}</span> <span class="muted res">{p.width}×{p.height}</span>
       </button>
     {/each}
     <div class="row">
@@ -378,7 +378,9 @@
 <style>
   .displays { height: 100%; display: grid; grid-template-columns: 260px 400px 1fr; background: var(--panel); }
   .col { padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--line); }
-  .name { text-align: left; background: transparent; border-color: transparent; padding: 6px 8px; }
+  .name { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; text-align: left; background: transparent; border-color: transparent; padding: 6px 8px; }
+  .pname { flex: 1; min-width: 0; }
+  .res { flex: none; font-variant-numeric: tabular-nums; }
   .name.sel { background: var(--panel-2); border-color: var(--line); }
   fieldset { border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin: 0; }
   legend { color: var(--accent); font-size: 12px; padding: 0 4px; }
