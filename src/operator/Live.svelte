@@ -98,6 +98,15 @@
   }
   const summary = (id: string) => app.songs.find((s) => s.id === id);
 
+  // Single-language displays switch language. Multi-language displays toggle one in or out.
+  function pickLanguage(p: { id: string; languages: string[] }, code: string) {
+    let next: string[];
+    if (p.languages.length <= 1) next = [code];
+    else if (p.languages.includes(code)) next = p.languages.filter((l) => l !== code);
+    else next = [...p.languages, code];
+    if (next.length) link.send('profileLanguages', { id: p.id, languages: next });
+  }
+
   function onKey(e: KeyboardEvent) {
     const t = e.target as HTMLElement;
     if (t.matches('input, textarea, select')) {
@@ -281,6 +290,14 @@
             <button title="Smaller text" onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}>A−</button>
             <button title="Larger text" onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}>A+</button>
           </div>
+          <div class="langpills">
+            {#each st.languages as l (l.code)}
+              {@const on = p.languages.includes(l.code)}
+              <button class:on title={l.name} onclick={() => pickLanguage(p, l.code)}>
+                {l.code.toUpperCase()}{#if on && p.languages.length > 1}<sup>{p.languages.indexOf(l.code) + 1}</sup>{/if}
+              </button>
+            {/each}
+          </div>
           <a class="url" href={displayUrls(p.id)[0]} target="_blank">{displayUrls(p.id)[0]}</a>
         </div>
       {/each}
@@ -359,5 +376,8 @@
   .preview { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
   .display { border-top: 1px solid var(--line); padding-top: 8px; }
   .display button { padding: 2px 8px; }
+  .langpills { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; }
+  .langpills button { padding: 2px 10px; font-size: 12px; font-weight: 600; border-radius: 999px; }
+  .langpills button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .url { font-size: 12px; color: var(--accent); word-break: break-all; }
 </style>

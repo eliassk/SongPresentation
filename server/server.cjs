@@ -175,6 +175,10 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     profileDelete({ id }) {
       if (state.profiles.length > 1) state.profiles = state.profiles.filter((p) => p.id !== id);
     },
+    profileLanguages({ id, languages }) {
+      const p = state.profiles.find((x) => x.id === id);
+      if (p && Array.isArray(languages) && languages.length) p.languages = languages;
+    },
     fontStep({ id, delta }) {
       const p = state.profiles.find((x) => x.id === id);
       if (!p) return;
