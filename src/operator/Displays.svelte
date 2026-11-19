@@ -348,7 +348,13 @@
       </div>
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="preview editable" bind:this={previewEl} onpointerdown={onPreviewDown} style:aspect-ratio="{draft.width} / {draft.height}">
-        <Stage profile={draft} song={previewSong} slideIndex={st.liveSong ? st.live.slideIndex : 0} checker />
+        <Stage
+          profile={draft}
+          song={previewSong}
+          slideIndex={st.liveSong ? st.live.slideIndex : 0}
+          disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
+          checker
+        />
         <div
           class="areaframe"
           style:left="{draft.area.x}%"

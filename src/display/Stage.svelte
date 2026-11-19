@@ -1,14 +1,16 @@
 <script lang="ts">
   import Display from './Display.svelte';
+  import Confidence from './Confidence.svelte';
   import type { Profile, Song } from '../shared/types';
 
-  let { profile, song, slideIndex = 0, blank = false, checker = false }: {
+  let { profile, song, slideIndex = 0, blank = false, checker = false, disabled = [] }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
     blank?: boolean;
     /** Show a checkerboard behind transparent backgrounds (preview only). */
     checker?: boolean;
+    disabled?: number[];
   } = $props();
 
   let w = $state(0);
@@ -24,7 +26,11 @@
     style:height="{profile.height}px"
     style:transform="translate(-50%, -50%) scale({scale})"
   >
-    <Display {profile} {song} {slideIndex} {blank} />
+    {#if profile.mode === 'confidence'}
+      <Confidence {profile} {song} {slideIndex} {blank} {disabled} />
+    {:else}
+      <Display {profile} {song} {slideIndex} {blank} />
+    {/if}
   </div>
 </div>
 

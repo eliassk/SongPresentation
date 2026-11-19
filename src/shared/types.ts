@@ -41,6 +41,8 @@ export interface LangStyle {
 export interface Profile {
   id: string;
   name: string;
+  /** "confidence" is the singers' view: current + next verse. */
+  mode?: 'audience' | 'confidence';
   width: number;
   height: number;
   languages: LangCode[];

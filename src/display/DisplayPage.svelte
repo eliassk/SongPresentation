@@ -17,7 +17,13 @@
 </script>
 
 {#if profile && st}
-  <Stage {profile} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} />
+  <Stage
+    {profile}
+    song={st.liveSong}
+    slideIndex={st.live.slideIndex}
+    blank={st.live.blank}
+    disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
+  />
 {:else if !online}
   <div class="wait">SongPresentation: connecting…</div>
 {/if}

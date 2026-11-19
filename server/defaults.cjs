@@ -71,7 +71,11 @@ const profiles = () => [
     text: { ...baseProfile({}).text, maxSize: 120 },
     header: { ...baseProfile({}).header, numberSize: 110, creditsSize: 28 },
   }),
+  confidenceProfile(),
 ];
+
+const confidenceProfile = () =>
+  baseProfile({ id: 'confidence', name: 'Stage confidence (singers)', mode: 'confidence', languages: ['pl'] });
 
 const languages = () => [
   { code: 'pl', name: 'Polski' },
@@ -126,4 +130,4 @@ const songs = () => [
   ]),
 ];
 
-module.exports = { baseProfile, state, songs };
+module.exports = { baseProfile, confidenceProfile, state, songs };

@@ -95,7 +95,8 @@ app.whenReady().then(async () => {
     width: 1440,
     height: 900,
     title: 'SongPresentation',
-    backgroundColor: '#14161a',
+    backgroundColor: '#ebe9e5',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
   });
   win.loadURL(`http://localhost:${PORT}/`);
 

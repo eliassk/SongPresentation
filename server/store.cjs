@@ -35,6 +35,11 @@ function open(dataDir) {
   const state = merge(defaults.state(), readJson(stateFile, defaults.state));
   const base = defaults.baseProfile({});
   state.profiles = state.profiles.map((p) => merge(base, p));
+  // Added once for installs from before the confidence view existed.
+  if (!state.confidenceAdded) {
+    if (!state.profiles.some((p) => p.mode === 'confidence')) state.profiles.push(defaults.confidenceProfile());
+    state.confidenceAdded = true;
+  }
   const songs = new Map(readJson(songsFile, defaults.songs).map((s) => [s.id, s]));
 
   let stateTimer = null;

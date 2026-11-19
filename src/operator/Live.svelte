@@ -285,7 +285,7 @@
       </div>
       <div class="previewwrap">
         <div class="preview" style:aspect-ratio="{preview.width} / {preview.height}">
-          <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} checker />
+          <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} disabled={[...liveDisabled]} checker />
         </div>
       </div>
       <div class="nowline">
