@@ -163,7 +163,8 @@
         {/key}
         {#if profile.text.autoFit}
           <div class="measure" bind:this={measure} aria-hidden="true">
-            {#each keys as k (k)}{@render slideBody(k, true)}{/each}
+            <!-- The order repeats verses (a chorus); each MUST be measured once. -->
+            {#each [...new Set(keys)] as k (k)}{@render slideBody(k, true)}{/each}
           </div>
         {/if}
       </div>
