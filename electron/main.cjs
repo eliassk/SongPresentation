@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, session } = require('electron');
+const { app, BrowserWindow, dialog, shell, session } = require('electron');
 const path = require('path');
 const { startServer } = require('../server/server.cjs');
 
@@ -84,12 +84,23 @@ app.whenReady().then(async () => {
   const st = session.fromPartition('persist:songtreasures');
   st.setUserAgent(st.getUserAgent().replace(/\s?(Electron|SongPresentation|song-presentation)\/\S+/g, ''));
 
-  await startServer({
-    port: PORT,
-    dataDir: app.getPath('userData'),
-    distDir: path.join(__dirname, '..', 'dist'),
-    getSongTreasuresToken,
-  });
+  // A failed start MUST be shown and quit the app; otherwise it hangs with no window.
+  try {
+    await startServer({
+      port: PORT,
+      dataDir: app.getPath('userData'),
+      distDir: path.join(__dirname, '..', 'dist'),
+      getSongTreasuresToken,
+    });
+  } catch (e) {
+    const busy = e && e.code === 'EADDRINUSE';
+    dialog.showErrorBox(
+      'SongPresentation could not start',
+      busy ? `Port ${PORT} is already in use. Another SongPresentation may still be running.` : String((e && e.stack) || e),
+    );
+    app.quit();
+    return;
+  }
 
   const win = new BrowserWindow({
     width: 1440,
