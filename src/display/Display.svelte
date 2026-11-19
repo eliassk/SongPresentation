@@ -94,12 +94,12 @@
       {#if h.show}
         <header
           style:color={h.color}
-          style:padding="{profile.layout.padding * 0.45}px {profile.layout.padding * 0.7}px {profile.layout.padding * 0.3}px"
+          style:padding="{profile.layout.padding * 0.35}px {profile.layout.padding}px {profile.layout.padding * 0.25}px"
           style:border-bottom={h.rule ? `2px solid ${h.ruleColor}` : 'none'}
         >
           <div class="id">
             {#if h.showCollection && song.collectionKey}
-              <span class="ckey" style:font-size="{h.numberSize * 0.2}px">{song.collectionKey}</span>
+              <span class="ckey" style:font-size="{Math.max(h.numberSize * 0.24, h.creditsSize * 0.8)}px">{song.collectionKey}</span>
             {/if}
             {#if h.showNumber && song.number != null}
               <span class="num" style:font-size="{h.numberSize}px">{song.number}</span>
