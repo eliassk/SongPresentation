@@ -25,22 +25,26 @@
     return song.lyrics[lang]?.[k] ?? Object.values(song.lyrics).find((l) => l[k]?.length)?.[k] ?? [];
   };
 
-  // Long verses shrink to fit; singers MUST see the whole verse.
-  const MAX = 64;
-  const MIN = 28;
+  // Follows the profile's text settings. With auto-fit, singers MUST see the whole verse.
   let current = $state<HTMLElement>();
-  let size = $state(MAX);
+  let size = $state(64);
 
   async function fit() {
     await tick();
     const el = current;
+    const t = profile.text;
     if (!el) return;
+    if (!t.autoFit) {
+      el.style.fontSize = t.size + 'px';
+      size = t.size;
+      return;
+    }
     const fits = (s: number) => {
       el.style.fontSize = s + 'px';
       return el.scrollHeight <= el.clientHeight + 1;
     };
-    let lo = MIN;
-    let hi = MAX;
+    let lo = Math.min(t.minSize, t.maxSize);
+    let hi = t.maxSize;
     if (fits(hi)) lo = hi;
     else
       while (hi - lo > 1) {
@@ -53,6 +57,8 @@
   }
 
   $effect(() => {
+    JSON.stringify(profile.text);
+    void profile.showVerseLabel;
     void key;
     void song;
     void nextKey;
@@ -90,14 +96,21 @@
     <div class="blanked">Screens are blanked</div>
   {/if}
 
-  <section class="current" class:dim={blank} bind:this={current} style:font-size="{size}px">
+  <section
+    class="current"
+    class:dim={blank}
+    class:shadow={profile.text.shadow}
+    bind:this={current}
+    style:font-size="{size}px"
+    style:line-height={profile.text.lineHeight}
+  >
     {#if key}
-      <div class="label">{verseLabel(key)}</div>
+      {#if profile.showVerseLabel}<div class="label">{verseLabel(key)}</div>{/if}
       {#each lines(key) as line}<div class="line">{line}</div>{/each}
     {/if}
   </section>
 
-  <section class="next">
+  <section class="next" style:line-height={profile.text.lineHeight}>
     {#if nextKey}
       <div class="nlabel">Next · {verseLabel(nextKey)}</div>
       {#each lines(nextKey) as line}<div class="line">{line}</div>{/each}
@@ -132,12 +145,12 @@
   .title.idle { color: #6f6a61; }
   .pos, .clock { font-variant-numeric: tabular-nums; }
   .clock { color: #fff; font-weight: 600; }
-  .current { line-height: 1.32; font-weight: 600; overflow: hidden; min-height: 0; }
+  .current { font-weight: 600; overflow: hidden; min-height: 0; }
   .current.dim { opacity: 0.35; }
+  .shadow { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9); }
   .label { font-size: 0.5em; color: #e9c46a; font-weight: 700; margin-bottom: 6px; }
   .next {
     font-size: 38px;
-    line-height: 1.3;
     color: #8b877f;
     border-top: 2px solid #2a2a2a;
     padding-top: 18px;
