@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import type { Profile, Song } from '../shared/types';
   import { slideKeys, verseLabel } from '../shared/slides';
 
@@ -25,6 +25,49 @@
     return song.lyrics[lang]?.[k] ?? Object.values(song.lyrics).find((l) => l[k]?.length)?.[k] ?? [];
   };
 
+  // Long verses shrink to fit; singers MUST see the whole verse.
+  const MAX = 64;
+  const MIN = 28;
+  let current = $state<HTMLElement>();
+  let size = $state(MAX);
+
+  async function fit() {
+    await tick();
+    const el = current;
+    if (!el) return;
+    const fits = (s: number) => {
+      el.style.fontSize = s + 'px';
+      return el.scrollHeight <= el.clientHeight + 1;
+    };
+    let lo = MIN;
+    let hi = MAX;
+    if (fits(hi)) lo = hi;
+    else
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (fits(mid)) lo = mid;
+        else hi = mid;
+      }
+    el.style.fontSize = lo + 'px';
+    size = lo;
+  }
+
+  $effect(() => {
+    void key;
+    void song;
+    void nextKey;
+    fit();
+    document.fonts?.ready.then(fit);
+  });
+
+  $effect(() => {
+    const el = current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+
   let now = $state(new Date());
   const timer = setInterval(() => (now = new Date()), 1000);
   onDestroy(() => clearInterval(timer));
@@ -47,7 +90,7 @@
     <div class="blanked">Screens are blanked</div>
   {/if}
 
-  <section class="current" class:dim={blank}>
+  <section class="current" class:dim={blank} bind:this={current} style:font-size="{size}px">
     {#if key}
       <div class="label">{verseLabel(key)}</div>
       {#each lines(key) as line}<div class="line">{line}</div>{/each}
@@ -89,7 +132,7 @@
   .title.idle { color: #6f6a61; }
   .pos, .clock { font-variant-numeric: tabular-nums; }
   .clock { color: #fff; font-weight: 600; }
-  .current { font-size: 64px; line-height: 1.32; font-weight: 600; overflow: hidden; min-height: 0; }
+  .current { line-height: 1.32; font-weight: 600; overflow: hidden; min-height: 0; }
   .current.dim { opacity: 0.35; }
   .label { font-size: 0.5em; color: #e9c46a; font-weight: 700; margin-bottom: 6px; }
   .next {
