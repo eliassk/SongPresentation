@@ -4,6 +4,20 @@
   import Stage from '../display/Stage.svelte';
   import { slideKeys, verseLabel, verseCount } from '../shared/slides';
   import type { Song } from '../shared/types';
+  import Check from '@lucide/svelte/icons/check';
+  import Play from '@lucide/svelte/icons/play';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import SkipBack from '@lucide/svelte/icons/skip-back';
+  import SkipForward from '@lucide/svelte/icons/skip-forward';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import Search from '@lucide/svelte/icons/search';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import Minus from '@lucide/svelte/icons/minus';
 
   let st = $derived(app.state!);
   let preview = $derived(st.profiles[0]);
@@ -98,12 +112,12 @@
   }
   const summary = (id: string) => app.songs.find((s) => s.id === id);
 
-  // Single-language displays switch language. Multi-language displays toggle one in or out.
-  function pickLanguage(p: { id: string; languages: string[] }, code: string) {
+  // Click shows only that language. Shift/Cmd/Ctrl-click adds or removes it (multi-column).
+  function pickLanguage(p: { id: string; languages: string[] }, code: string, e: MouseEvent) {
     let next: string[];
-    if (p.languages.length <= 1) next = [code];
-    else if (p.languages.includes(code)) next = p.languages.filter((l) => l !== code);
-    else next = [...p.languages, code];
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      next = p.languages.includes(code) ? p.languages.filter((l) => l !== code) : [...p.languages, code];
+    } else next = [code];
     if (next.length) link.send('profileLanguages', { id: p.id, languages: next });
   }
 
@@ -136,51 +150,55 @@
 
 <div class="live">
   <!-- Library -->
-  <section class="col left">
+  <section class="col">
     <div class="card pad stack">
-      <select bind:value={collection}>
-        {#each collections as c (c.key)}<option value={c.key}>{c.name} ({c.key})</option>{/each}
+      <select bind:value={collection} aria-label="Collection">
+        {#each collections as c (c.key)}<option value={c.key}>{c.name} · {c.key}</option>{/each}
       </select>
-      <form class="row" onsubmit={jumpNumber}>
-        <input id="number" class="grow" inputmode="numeric" placeholder="Song number → Enter" bind:value={numberBox} />
-        <button type="submit">Go</button>
+      <form class="numrow" onsubmit={jumpNumber}>
+        <input id="number" class="grow num" inputmode="numeric" placeholder="Song number" bind:value={numberBox} aria-label="Song number" />
+        <button type="submit" class="primary">Go live</button>
       </form>
-      <input id="search" placeholder="Search all collections… ( / )" bind:value={q} />
+      <div class="search">
+        <Search size={15} />
+        <input id="search" placeholder="Search all collections" bind:value={q} aria-label="Search songs" />
+        <kbd>/</kbd>
+      </div>
       <label class="follow" title="Clicking a song puts it on the screens immediately">
         <input type="checkbox" bind:checked={follow} /> Screens follow selection
       </label>
     </div>
 
-    <div class="card list">
+    <div class="card list" role="list">
       {#each filtered as s (s.id)}
-        <div class="item" class:sel={selected?.id === s.id} class:islive={st.live.songId === s.id}>
+        <div class="item" role="listitem" class:sel={selected?.id === s.id} class:islive={st.live.songId === s.id}>
           <button class="name" onclick={() => select(s.id)} ondblclick={() => link.send('setLive', { songId: s.id })}>
-            <span class="n">{s.number ?? ''}</span>
+            <span class="n num">{s.number ?? ''}</span>
             <span class="t">{s.title[primary] ?? Object.values(s.title)[0]}</span>
             {#if q}<span class="k">{s.collectionKey}</span>{/if}
           </button>
-          <button class="add" title="Add to setlist" onclick={() => addToSetlist(s.id)}>+</button>
+          <button class="icon ghost" title="Add to setlist" aria-label="Add to setlist" onclick={() => addToSetlist(s.id)}><Plus size={15} /></button>
         </div>
       {:else}
-        <p class="muted pad">No songs.</p>
+        <p class="empty">No songs match “{q}”.</p>
       {/each}
     </div>
 
     <div class="card pad">
-      <h2>Setlist <span class="muted">(n / p)</span></h2>
+      <div class="row head"><h2 class="grow">Setlist</h2><span class="hint">N / P</span></div>
       {#each st.setlist as id, i (id)}
         {@const s = summary(id)}
         <div class="item" class:sel={selected?.id === id} class:islive={st.live.songId === id}>
           <button class="name" onclick={() => select(id)}>
-            <span class="k">{s?.collectionKey}</span><span class="n">{s?.number ?? ''}</span>
+            <span class="k">{s?.collectionKey}</span><span class="n num">{s?.number ?? ''}</span>
             <span class="t">{s ? (s.title[primary] ?? Object.values(s.title)[0]) : id}</span>
           </button>
-          <button class="add" onclick={() => moveInSetlist(i, -1)}>↑</button>
-          <button class="add" onclick={() => moveInSetlist(i, 1)}>↓</button>
-          <button class="add" onclick={() => link.send('setlist', { ids: st.setlist.filter((x) => x !== id) })}>×</button>
+          <button class="icon ghost" aria-label="Move up" onclick={() => moveInSetlist(i, -1)}><ArrowUp size={14} /></button>
+          <button class="icon ghost" aria-label="Move down" onclick={() => moveInSetlist(i, 1)}><ArrowDown size={14} /></button>
+          <button class="icon ghost" aria-label="Remove" onclick={() => link.send('setlist', { ids: st.setlist.filter((x) => x !== id) })}><X size={14} /></button>
         </div>
       {:else}
-        <p class="muted small">Use + to build the service.</p>
+        <p class="empty small">Add songs with <Plus size={12} /> to plan the service.</p>
       {/each}
     </div>
   </section>
@@ -188,95 +206,113 @@
   <!-- Song page -->
   <section class="col mid">
     {#if selected}
-      <div class="songnav">
-        <button onclick={() => link.send('songStep', { delta: -1 })} title="Previous song in collection ( [ )">← Prev song</button>
-        <span class="grow"></span>
-        <button onclick={() => link.send('songStep', { delta: 1 })} title="Next song in collection ( ] )">Next song →</button>
-      </div>
-
-      <div class="card">
-        <div class="cardhead collection">{selected.collection}</div>
+      <div class="card songcard">
+        <div class="cardhead">
+          <button class="icon ghost" title="Previous song in collection ( [ )" aria-label="Previous song" onclick={() => link.send('songStep', { delta: -1 })}><ChevronLeft size={18} /></button>
+          <span class="collection grow">{selected.collection}</span>
+          <button class="icon ghost" title="Next song in collection ( ] )" aria-label="Next song" onclick={() => link.send('songStep', { delta: 1 })}><ChevronRight size={18} /></button>
+        </div>
         <div class="info">
-          <div class="bignum">{selected.number ?? ''}</div>
+          <div class="bignum num">{selected.number ?? ''}</div>
           <div class="meta">
-            <div class="title">{selected.title[primary] ?? Object.values(selected.title)[0]}</div>
+            <h1 class="title">{selected.title[primary] ?? Object.values(selected.title)[0]}</h1>
             {#each langs.slice(1) as l}
               {#if selected.title[l]}<div class="subtitle">{selected.title[l]}</div>{/if}
             {/each}
-            {#if selected.author}
-              <div class="m">Written{selected.year ? ` in ${selected.year}` : ''} by <span class="chip">{selected.author}</span></div>
-            {/if}
-            <div class="m">{selected.composer || 'Unknown composer'}</div>
-            {#if selected.copyright}<div class="m">Text ©: {selected.copyright}</div>{/if}
-            <div class="m">{[selected.key, verseCount(selected)].filter(Boolean).join(' · ')}</div>
+            <div class="facts">
+              {#if selected.author}<span>Written{selected.year ? ` in ${selected.year}` : ''} by <span class="chip">{selected.author}</span></span>{/if}
+              <span>{selected.composer || 'Unknown composer'}</span>
+              {#if selected.copyright}<span>Text © {selected.copyright}</span>{/if}
+              <span class="num">{[selected.key, verseCount(selected) ? `${verseCount(selected)} verses` : ''].filter(Boolean).join(' · ')}</span>
+            </div>
           </div>
-          <div class="golive">
-            <button class="primary" onclick={() => goLive(0)}>{selectedIsLive ? 'Restart' : 'Show'} (Enter)</button>
-          </div>
+          <button class="primary golive" onclick={() => goLive(0)}>
+            {#if selectedIsLive}<RotateCcw size={16} /> Restart{:else}<Play size={16} /> Show{/if}
+            <kbd class="onaccent">↵</kbd>
+          </button>
         </div>
       </div>
 
       <div class="card">
-        <div class="cardhead row">
-          <strong class="choose">Choose verses</strong>
-          <button class="toggleall" onclick={toggleAll}>
-            <span class="check" class:off={disabled.size > 0}>✓</span> Toggle all verses
+        <div class="cardhead">
+          <h2 class="nomargin">Verses</h2>
+          <button class="toggleall ghost" onclick={toggleAll}>
+            <span class="check" class:off={disabled.size > 0}><Check size={12} strokeWidth={3} /></span>
+            {disabled.size > 0 ? 'Enable all' : 'All enabled'}
           </button>
           <span class="grow"></span>
-          <span class="muted small">Click a verse to skip it · ▶ to show it</span>
+          <span class="hint">Click to skip a verse · <Play size={11} /> to show it</span>
         </div>
         <div class="verses">
           {#each selKeys as k, i}
             {@const off = disabled.has(i)}
             {@const isLive = selectedIsLive && st.live.slideIndex === i}
             <div class="verse" class:off class:islive={isLive}>
-              <button class="vbody" onclick={() => toggle(i)} title={off ? 'Enable verse' : 'Skip verse'}>
-                <div class="vhead"><span class="check" class:off>✓</span> <strong>{verseLabel(k)}</strong></div>
+              <button class="vbody" onclick={() => toggle(i)} aria-pressed={!off} title={off ? 'Enable verse' : 'Skip verse'}>
+                <div class="vhead">
+                  <span class="check" class:off><Check size={12} strokeWidth={3} /></span>
+                  <strong class="num">{verseLabel(k)}</strong>
+                  {#if isLive}<span class="livetag">On screen</span>{/if}
+                </div>
                 <div class="vcols" style:grid-template-columns="repeat({langs.length}, 1fr)">
                   {#each langs as l, li}
                     <div class:second={li > 0}>
-                      {#each selected.lyrics[l]?.[k] ?? [] as line}<div>{line}</div>{:else}<div class="muted">—</div>{/each}
+                      {#each selected.lyrics[l]?.[k] ?? [] as line}<div>{line}</div>{:else}<div class="muted">No {l.toUpperCase()} text</div>{/each}
                     </div>
                   {/each}
                 </div>
               </button>
-              <button class="show" title="Show this verse" onclick={() => goLive(i)}>▶</button>
+              <button class="show" title="Show this verse" aria-label="Show this verse" onclick={() => goLive(i)}><Play size={18} /></button>
             </div>
           {/each}
         </div>
       </div>
     {:else}
-      <div class="card pad muted">Pick a song, or type its number and press Enter.</div>
+      <div class="card welcome">
+        <h1>Ready for the service</h1>
+        <p class="muted">Type a song number and press Enter, or pick one from the list. Arrow keys move between verses, B blanks the screens.</p>
+      </div>
     {/if}
   </section>
 
   <!-- Live output -->
-  <section class="col right">
-    <div class="card pad stack">
-      <div class="row">
-        <h2 class="grow nomargin">Live · {preview?.name}</h2>
-        <button class:on={st.live.blank} onclick={() => link.send('blank', {})}>Blank (B)</button>
-        <button onclick={() => link.send('clear')}>Clear</button>
+  <section class="col">
+    <div class="card onair" class:active={!!st.liveSong && !st.live.blank}>
+      <div class="cardhead">
+        <span class="badge" class:active={!!st.liveSong && !st.live.blank}><span class="dot"></span>{st.live.blank ? 'Blanked' : st.liveSong ? 'Live' : 'Standby'}</span>
+        <span class="grow small muted">{preview?.name}</span>
+        <button class="ghost small" onclick={() => link.send('clear')}>Clear</button>
       </div>
-      <div class="preview" style:aspect-ratio="{preview.width} / {preview.height}">
-        <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} checker />
+      <div class="previewwrap">
+        <div class="preview" style:aspect-ratio="{preview.width} / {preview.height}">
+          <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} checker />
+        </div>
       </div>
-      <div class="row">
-        <button onclick={() => link.send('step', { delta: -1 })}>← Prev</button>
-        <span class="grow center muted">
-          {st.liveSong ? `${songName(st.liveSong, primary)} · ${verseLabel(liveKeys[st.live.slideIndex] ?? '')}` : 'Nothing live'}
-        </span>
-        <button onclick={() => link.send('step', { delta: 1 })}>Next →</button>
+      <div class="nowline">
+        {#if st.liveSong}
+          <strong class="num">{st.liveSong.collectionKey} {st.liveSong.number ?? ''}</strong>
+          <span class="grow ellipsis">{st.liveSong.title[primary] ?? Object.values(st.liveSong.title)[0]}</span>
+          <span class="vpos num">{verseLabel(liveKeys[st.live.slideIndex] ?? '')}</span>
+        {:else}
+          <span class="muted">Nothing on screen</span>
+        {/if}
+      </div>
+      <div class="transport">
+        <button class="big" aria-label="Previous verse" onclick={() => link.send('step', { delta: -1 })}><SkipBack size={18} /> Prev</button>
+        <button class="big blank" class:on={st.live.blank} onclick={() => link.send('blank', {})}><EyeOff size={18} /> Blank <kbd>B</kbd></button>
+        <button class="big next" aria-label="Next verse" onclick={() => link.send('step', { delta: 1 })}>Next <SkipForward size={18} /></button>
       </div>
     </div>
 
     <div class="card pad">
-      <h2>Next</h2>
+      <h2>Up next</h2>
       {#if nextIndex !== -1 && st.liveSong}
-        <strong class="small">{verseLabel(liveKeys[nextIndex])}</strong>
-        {#each st.liveSong.lyrics[primary]?.[liveKeys[nextIndex]] ?? [] as line}<div>{line}</div>{/each}
+        <div class="next">
+          <span class="vtag num">{verseLabel(liveKeys[nextIndex])}</span>
+          <div>{#each st.liveSong.lyrics[primary]?.[liveKeys[nextIndex]] ?? [] as line}<div>{line}</div>{/each}</div>
+        </div>
       {:else}
-        <span class="muted">End of song</span>
+        <p class="muted small nomargin">{st.liveSong ? 'Last verse of this song.' : 'Nothing queued.'}</p>
       {/if}
     </div>
 
@@ -286,14 +322,17 @@
         <div class="display">
           <div class="row">
             <strong class="grow">{p.name}</strong>
-            <span class="muted small">{p.width}×{p.height}</span>
-            <button title="Smaller text" onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}>A−</button>
-            <button title="Larger text" onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}>A+</button>
+            <span class="muted small num">{p.width}×{p.height}</span>
+            <div class="seg">
+              <button class="icon" title="Smaller text" aria-label="Smaller text" onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}><Minus size={14} /></button>
+              <span class="seglabel">A</span>
+              <button class="icon" title="Larger text" aria-label="Larger text" onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}><Plus size={14} /></button>
+            </div>
           </div>
-          <div class="langpills">
+          <div class="langpills" role="group" aria-label="Languages on {p.name}">
             {#each st.languages as l (l.code)}
               {@const on = p.languages.includes(l.code)}
-              <button class:on title={l.name} onclick={() => pickLanguage(p, l.code)}>
+              <button class:sel={on} aria-pressed={on} title="{l.name}: click to show only this · Shift-click to add or remove" onclick={(e) => pickLanguage(p, l.code, e)}>
                 {l.code.toUpperCase()}{#if on && p.languages.length > 1}<sup>{p.languages.indexOf(l.code) + 1}</sup>{/if}
               </button>
             {/each}
@@ -301,6 +340,7 @@
           <a class="url" href={displayUrls(p.id)[0]} target="_blank">{displayUrls(p.id)[0]}</a>
         </div>
       {/each}
+      <p class="hint nomargin">Click a language to show only it. Shift-click to add a second column.</p>
     </div>
   </section>
 </div>
@@ -309,75 +349,131 @@
   .live {
     height: 100%;
     display: grid;
-    grid-template-columns: 290px minmax(0, 1fr) 420px;
+    grid-template-columns: 300px minmax(0, 1fr) 440px;
     gap: 16px;
     padding: 16px;
   }
-  .col { overflow: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .col { overflow: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding: 2px; }
   .pad { padding: 14px 16px; }
-  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
   .small { font-size: 12px; }
   .nomargin { margin: 0; }
-  .center { text-align: center; }
+  .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hint { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+  .head { margin-bottom: 4px; }
+  .head h2 { margin: 0; }
+  kbd {
+    font: 600 11px/1 'Inter Variable', sans-serif;
+    color: var(--muted);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 3px 6px;
+  }
+  kbd.onaccent { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+  .ghost { background: transparent; border-color: transparent; }
+  .ghost:hover { background: var(--panel-2); border-color: transparent; }
+  .icon { padding: 5px; color: var(--muted); }
+  .icon:hover { color: var(--text); }
 
-  .follow { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
-  .list { flex: 1; min-height: 180px; overflow: auto; padding: 6px; }
-  .item { display: flex; gap: 2px; border-radius: 6px; }
-  .item button { background: transparent; border-color: transparent; padding: 5px 8px; }
-  .item .name { flex: 1; display: flex; gap: 8px; text-align: left; min-width: 0; }
-  .item .n { color: var(--muted); min-width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; }
-  .item .k { color: var(--accent); font-size: 11px; font-weight: 600; }
+  .numrow { display: flex; gap: 8px; }
+  .numrow input { font-size: 16px; font-weight: 600; letter-spacing: 0.02em; }
+  .search { position: relative; display: flex; align-items: center; color: var(--muted); }
+  .search :global(svg) { position: absolute; left: 10px; pointer-events: none; }
+  .search input { width: 100%; padding-left: 32px; padding-right: 34px; }
+  .search kbd { position: absolute; right: 8px; }
+  .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }
+
+  .list { flex: 1; min-height: 200px; overflow: auto; padding: 6px; }
+  .item { display: flex; gap: 2px; border-radius: 8px; transition: background 120ms var(--ease); }
+  .item:hover { background: var(--panel-2); }
+  .item button { background: transparent; border-color: transparent; }
+  .item .name { flex: 1; justify-content: flex-start; gap: 10px; text-align: left; min-width: 0; padding: 6px 8px; font-weight: 400; }
+  .item .n { color: var(--muted); min-width: 2.4em; text-align: right; font-size: 13px; }
+  .item .k { color: var(--accent-ink); font-size: 11px; font-weight: 600; }
   .item .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .item.sel { background: var(--panel-2); }
+  .item.sel { background: var(--accent-soft); }
+  .item.sel .t { font-weight: 500; }
   .item.islive .t { color: var(--live); font-weight: 600; }
-  .item .add { color: var(--muted); }
+  .item.islive .n { color: var(--live); }
+  .item .icon { opacity: 0; }
+  .item:hover .icon, .item .icon:focus-visible { opacity: 1; }
+  .empty { color: var(--muted); padding: 12px; margin: 0; display: flex; align-items: center; gap: 4px; }
 
-  .songnav { display: flex; gap: 8px; }
-  .songnav button { background: var(--panel); }
-  .cardhead { padding: 14px 24px; border-bottom: 1px solid var(--line); }
-  .collection { color: var(--accent); font-size: 17px; }
-  .info { display: flex; gap: 20px; padding: 18px 24px 22px; }
-  .bignum { font-size: 34px; font-weight: 700; color: #9aa0a8; line-height: 1.1; min-width: 1.5em; }
-  .meta { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-  .title { font-size: 24px; font-weight: 700; line-height: 1.2; }
-  .subtitle { font-size: 16px; color: var(--accent); }
-  .m { color: var(--muted); font-size: 15px; }
-  .chip { background: var(--panel-2); border-radius: 6px; padding: 3px 9px; }
-  .golive { align-self: flex-start; }
+  .cardhead { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .collection { color: var(--accent-ink); font-size: 15px; font-weight: 500; text-align: center; }
+  .info { display: flex; gap: 22px; padding: 22px 26px 24px; align-items: flex-start; }
+  .bignum { font-size: 44px; font-weight: 700; color: #a8a196; line-height: 1; letter-spacing: -0.03em; min-width: 1.4em; }
+  .meta { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .title { font-size: 25px; font-weight: 700; line-height: 1.2; margin: 0; letter-spacing: -0.015em; text-wrap: balance; }
+  .subtitle { font-size: 16px; color: var(--accent-ink); }
+  .facts { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .chip { background: var(--panel-2); border-radius: 6px; padding: 2px 8px; color: var(--text-2); }
+  .golive { padding: 10px 16px; font-size: 15px; border-radius: var(--radius); }
 
-  .choose { font-size: 17px; }
-  .toggleall { display: flex; gap: 8px; align-items: center; border: none; }
+  .toggleall { color: var(--text-2); font-size: 13px; }
   .check {
     display: inline-grid;
     place-items: center;
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #46b85a;
+    background: var(--ok);
     color: #fff;
-    font-size: 12px;
-    font-weight: 700;
     flex: none;
+    transition: background 150ms var(--ease);
   }
-  .check.off { background: #c9ccd1; }
+  .check.off { background: var(--line-strong); }
 
-  .verses { padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 8px; }
-  .verse { display: flex; border: 1px solid transparent; border-radius: 10px; }
+  .verses { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .verse { display: flex; border: 1px solid transparent; border-radius: var(--radius); transition: background 150ms var(--ease), border-color 150ms var(--ease), opacity 150ms var(--ease); }
+  .verse:hover { background: var(--panel-2); }
   .verse.islive { border-color: var(--accent); background: var(--accent-soft); }
-  .verse.off { opacity: 0.45; }
-  .verse.off .vcols { text-decoration: line-through; text-decoration-color: #0004; }
-  .vbody { flex: 1; text-align: left; background: transparent; border: none; padding: 12px 16px; font-size: 16px; line-height: 1.75; }
-  .vhead { display: flex; gap: 10px; align-items: center; margin-bottom: 2px; }
-  .vcols { display: grid; gap: 24px; }
-  .second { color: var(--accent); }
-  .show { background: transparent; border: none; color: var(--muted); font-size: 18px; padding: 0 16px; }
-  .show:hover { color: var(--accent); }
+  .verse.off { opacity: 0.42; }
+  .verse.off .vcols { text-decoration: line-through; text-decoration-color: rgba(0, 0, 0, 0.25); }
+  .vbody { flex: 1; display: block; text-align: left; background: transparent; border: none; padding: 12px 16px; font-size: 16px; font-weight: 400; line-height: 1.7; }
+  .vbody:hover { background: transparent; }
+  .vhead { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+  .livetag { font-size: 11px; font-weight: 600; color: var(--accent-ink); background: #fff; border: 1px solid var(--accent-line); border-radius: 999px; padding: 1px 8px; }
+  .vcols { display: grid; gap: 28px; }
+  .second { color: var(--accent-ink); }
+  .show { background: transparent; border: none; color: var(--muted); padding: 0 18px; border-radius: 0 var(--radius) var(--radius) 0; }
+  .show:hover { color: var(--accent-ink); background: var(--accent-soft); }
 
-  .preview { width: 100%; border-radius: 8px; overflow: hidden; background: #000; }
-  .display { border-top: 1px solid var(--line); padding-top: 8px; }
-  .display button { padding: 2px 8px; }
-  .langpills { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 4px; }
-  .langpills button { padding: 2px 10px; font-size: 12px; font-weight: 600; border-radius: 999px; }
-  .langpills button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .url { font-size: 12px; color: var(--accent); word-break: break-all; }
+  .welcome { padding: 40px 36px; }
+  .welcome h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: -0.015em; }
+  .welcome p { margin: 0; max-width: 52ch; line-height: 1.6; }
+
+  .onair { overflow: hidden; transition: box-shadow 200ms var(--ease); }
+  .onair.active { box-shadow: 0 0 0 2px var(--live), var(--shadow-lift); }
+  .onair .cardhead { padding: 10px 14px; }
+  .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); }
+  .badge.active { color: var(--live); }
+  .badge.active .dot { background: var(--live); }
+  .previewwrap { padding: 12px 14px 0; }
+  .preview { width: 100%; border-radius: 8px; overflow: hidden; background: #000; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); }
+  .nowline { display: flex; gap: 10px; align-items: baseline; padding: 10px 16px 0; min-height: 30px; }
+  .vpos { color: var(--accent-ink); font-weight: 600; }
+  .transport { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; padding: 12px 14px 14px; }
+  .big { padding: 12px 14px; font-size: 15px; font-weight: 600; border-radius: var(--radius); }
+  .big.next { background: var(--text); color: #fff; border-color: var(--text); }
+  .big.next:hover { background: #000; }
+  .blank kbd { margin-left: 2px; }
+  .blank.on kbd { background: rgba(255, 255, 255, 0.2); color: #fff; border-color: transparent; }
+
+  .next { display: flex; gap: 12px; line-height: 1.6; }
+  .vtag { font-weight: 600; color: var(--muted); min-width: 2em; }
+
+  .display { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .display:first-of-type { border-top: none; padding-top: 0; }
+  .seg { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-s); }
+  .seg button { border: none; border-radius: var(--radius-s); background: transparent; }
+  .seglabel { font-size: 12px; font-weight: 700; color: var(--text-2); padding: 0 2px; }
+  .langpills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .langpills button { padding: 3px 11px; font-size: 12px; font-weight: 600; border-radius: 999px; color: var(--text-2); }
+  .langpills button.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .langpills sup { font-size: 9px; margin-left: 1px; opacity: 0.85; }
+  .url { font-size: 12px; color: var(--accent-ink); word-break: break-all; text-underline-offset: 3px; }
 </style>

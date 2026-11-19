@@ -17,6 +17,23 @@
     if (p.id !== id) selectedId = p.id;
   });
 
+  // A reset happens on the server. The draft MUST reload from it, or the old draft is pushed back.
+  let pendingReset: string | null = null;
+  function resetLayout() {
+    if (!draft || !confirm('Reset this display to its default layout? Name is kept.')) return;
+    pendingReset = draft.id;
+    link.send('profileReset', { id: draft.id });
+  }
+  $effect(() => {
+    const profiles = st.profiles;
+    untrack(() => {
+      if (!pendingReset) return;
+      const p = profiles.find((x) => x.id === pendingReset);
+      if (p) draft = structuredClone($state.snapshot(p));
+      pendingReset = null;
+    });
+  });
+
   // Push every edit live to all displays.
   $effect(() => {
     if (!draft) return;
@@ -162,6 +179,19 @@
       </fieldset>
 
       <fieldset>
+        <legend>Text area on screen</legend>
+        <p class="muted small">Keeps the text in part of the screen. The background still fills it all.</p>
+        <label>Top {draft.area.y}% <input type="range" min="0" max="90" bind:value={draft.area.y} /></label>
+        <label>Height {draft.area.h}% <input type="range" min="10" max={100 - draft.area.y} bind:value={draft.area.h} /></label>
+        <label>Left {draft.area.x}% <input type="range" min="0" max="90" bind:value={draft.area.x} /></label>
+        <label>Width {draft.area.w}% <input type="range" min="10" max={100 - draft.area.x} bind:value={draft.area.w} /></label>
+        <div class="row">
+          <button onclick={() => (draft!.area = { x: 0, y: 0, w: 100, h: 100 })}>Full screen</button>
+          <button onclick={() => (draft!.area = { x: 5, y: 4, w: 90, h: 60 })}>Upper 60%</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
         <legend>Layout</legend>
         <div class="row">
           <label>Mode
@@ -244,9 +274,19 @@
     </section>
 
     <section class="col previewcol">
-      <h2>Preview · {draft.width}×{draft.height} {st.liveSong ? '(live song)' : '(sample)'}</h2>
+      <div class="row">
+        <h2 class="grow">Preview · {draft.width}×{draft.height} {st.liveSong ? '(live song)' : '(sample)'}</h2>
+        <button onclick={resetLayout}>Reset layout</button>
+      </div>
       <div class="preview" style:aspect-ratio="{draft.width} / {draft.height}">
         <Stage profile={draft} song={previewSong} slideIndex={st.liveSong ? st.live.slideIndex : 0} checker />
+        <div
+          class="areaframe"
+          style:left="{draft.area.x}%"
+          style:top="{draft.area.y}%"
+          style:width="{draft.area.w}%"
+          style:height="{draft.area.h}%"
+        ></div>
       </div>
       <p class="muted small">Changes go live to every screen showing this profile.</p>
     </section>
@@ -271,6 +311,8 @@
   .wrap { flex-wrap: wrap; }
   .urls code { font-size: 12px; color: var(--accent); word-break: break-all; }
   .urls button { padding: 2px 8px; }
+  .preview { position: relative; }
+  .areaframe { position: absolute; border: 1px dashed rgba(233, 196, 106, 0.8); pointer-events: none; border-radius: 2px; }
   .preview { width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #000; }
   .small { font-size: 12px; margin: 0; }
 </style>

@@ -1,4 +1,4 @@
-const langStyle = (color, italic = false, scale = 1) => ({ color, italic, scale, weight: 600 });
+const langStyle = (color, italic = false, scale = 1) => ({ color, italic, scale, weight: 500 });
 
 function baseProfile(overrides) {
   return {
@@ -10,10 +10,10 @@ function baseProfile(overrides) {
     layout: {
       mode: 'columns',
       ratio: 0.5,
-      gap: 64,
-      padding: 72,
+      gap: 96,
+      padding: 48,
       divider: true,
-      dividerColor: '#ffffff33',
+      dividerColor: '#ffffff26',
       align: 'top',
       textAlign: 'left',
     },
@@ -21,13 +21,13 @@ function baseProfile(overrides) {
       font: "'Inter Variable', 'Segoe UI', Arial, sans-serif",
       autoFit: true,
       size: 56,
-      maxSize: 84,
-      minSize: 18,
-      lineHeight: 1.3,
+      maxSize: 96,
+      minSize: 28,
+      lineHeight: 1.24,
       shadow: true,
       perLanguage: {
         pl: langStyle('#ffffff'),
-        no: langStyle('#f2cf6b'),
+        no: langStyle('#e9c46a'),
       },
     },
     header: {
@@ -36,12 +36,13 @@ function baseProfile(overrides) {
       showNumber: true,
       showTitle: false,
       showCredits: true,
-      numberSize: 150,
-      creditsSize: 38,
+      numberSize: 104,
+      creditsSize: 30,
       color: '#ffffff',
       rule: true,
-      ruleColor: '#ffffff66',
+      ruleColor: '#ffffff40',
     },
+    area: { x: 0, y: 0, w: 100, h: 100 },
     background: { type: 'color', color: '#111111' },
     transitionMs: 250,
     showVerseLabel: true,
@@ -51,14 +52,23 @@ function baseProfile(overrides) {
 }
 
 const profiles = () => [
-  baseProfile({ id: 'led-wall', name: 'LED wall (PL | NO)', width: 2048, height: 1024, languages: ['pl', 'no'] }),
+  // The LED wall reaches the floor. Text stays in the upper part, readable above the stage.
+  baseProfile({
+    id: 'led-wall',
+    name: 'LED wall (PL | NO)',
+    width: 2048,
+    height: 1024,
+    languages: ['pl', 'no'],
+    area: { x: 5, y: 4, w: 90, h: 60 },
+  }),
   baseProfile({
     id: 'stage',
     name: 'Stage projector',
     languages: ['pl'],
     background: { type: 'color', color: '#000000' },
-    text: { ...baseProfile({}).text, maxSize: 110 },
-    header: { ...baseProfile({}).header, numberSize: 120, creditsSize: 32 },
+    layout: { ...baseProfile({}).layout, padding: 80 },
+    text: { ...baseProfile({}).text, maxSize: 120 },
+    header: { ...baseProfile({}).header, numberSize: 110, creditsSize: 28 },
   }),
 ];
 

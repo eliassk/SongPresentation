@@ -83,12 +83,19 @@
   style:font-family={profile.text.font}
 >
   {#if !blank && song && key}
-    <div class="slide" class:shadow={profile.text.shadow}>
+    <div
+      class="slide"
+      class:shadow={profile.text.shadow}
+      style:left="{profile.area?.x ?? 0}%"
+      style:top="{profile.area?.y ?? 0}%"
+      style:width="{profile.area?.w ?? 100}%"
+      style:height="{profile.area?.h ?? 100}%"
+    >
       {#if h.show}
         <header
           style:color={h.color}
           style:padding="{profile.layout.padding * 0.45}px {profile.layout.padding * 0.7}px {profile.layout.padding * 0.3}px"
-          style:border-bottom={h.rule ? `3px solid ${h.ruleColor}` : 'none'}
+          style:border-bottom={h.rule ? `2px solid ${h.ruleColor}` : 'none'}
         >
           <div class="id">
             {#if h.showCollection && song.collectionKey}
@@ -158,7 +165,7 @@
     overflow: hidden;
   }
   .slide {
-    height: 100%;
+    position: absolute;
     display: flex;
     flex-direction: column;
   }
@@ -180,6 +187,7 @@
   }
   .ckey {
     font-weight: 500;
+    opacity: 0.7;
     letter-spacing: 0.04em;
     margin-right: 0.6em;
   }
@@ -194,8 +202,9 @@
   }
   .credits {
     text-align: right;
-    line-height: 1.25;
+    line-height: 1.35;
     font-weight: 400;
+    opacity: 0.78;
     letter-spacing: 0.01em;
   }
   .body {
@@ -243,5 +252,7 @@
   }
   .label {
     min-width: 1.6em;
+    opacity: 0.55;
+    font-variant-numeric: tabular-nums;
   }
 </style>

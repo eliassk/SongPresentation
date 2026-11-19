@@ -89,6 +89,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     liveSong: state.live.songId ? db.getSong(state.live.songId) : null,
     songsVersion,
     importStatus,
+    stImport: state.stImport ?? null,
     server: { port, ips: lanIps(), hostname: os.hostname() },
   });
 
@@ -175,6 +176,12 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     profileDelete({ id }) {
       if (state.profiles.length > 1) state.profiles = state.profiles.filter((p) => p.id !== id);
     },
+    profileReset({ id }) {
+      const i = state.profiles.findIndex((x) => x.id === id);
+      if (i === -1) return;
+      const def = defaults.state().profiles.find((x) => x.id === id) ?? defaults.baseProfile({ id, name: state.profiles[i].name });
+      state.profiles[i] = { ...def, name: state.profiles[i].name };
+    },
     profileLanguages({ id, languages }) {
       const p = state.profiles.find((x) => x.id === id);
       if (p && Array.isArray(languages) && languages.length) p.languages = languages;
@@ -190,6 +197,44 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     },
   };
 
+  async function startImport({ collections, languages }, known, res) {
+    if (importStatus.running) return sendJson(res, 409, { error: 'Import already running.' });
+    const token = await stTokenGet(false);
+    importStatus = { running: true, done: 0, total: 0, message: known ? 'Checking for updates…' : 'Starting…', error: '' };
+    broadcast();
+    songtreasures
+      .importCollections({
+        token,
+        collections,
+        languages,
+        dataDir,
+        known,
+        save: (song) => db.saveSong(song),
+        progress: (p) => {
+          importStatus = { ...importStatus, ...p };
+          broadcast();
+        },
+      })
+      .then((r) => {
+        const message = known
+          ? r.imported
+            ? `Updated ${r.imported - r.added} songs, added ${r.added} new. ${r.unchanged} unchanged.`
+            : `Everything is up to date (${r.unchanged} songs).`
+          : `Imported ${r.imported} of ${r.total} songs.`;
+        importStatus = { running: false, done: r.total, total: r.total, message, error: '' };
+        if (state.stImport) state.stImport.lastSync = new Date().toISOString();
+        db.saveState();
+      })
+      .catch((e) => {
+        importStatus = { ...importStatus, running: false, error: e.message };
+      })
+      .finally(() => {
+        songsVersion++;
+        broadcast();
+      });
+    return sendJson(res, 202, { ok: true });
+  }
+
   async function handleSongTreasures(req, res, url) {
     const route = url.pathname.replace('/api/st/', '');
     try {
@@ -204,37 +249,32 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       }
       if (route === 'collections') return sendJson(res, 200, await songtreasures.listCollections(await stTokenGet(false), dataDir));
       if (route === 'import' && req.method === 'POST') {
-        if (importStatus.running) return sendJson(res, 409, { error: 'Import already running.' });
         const { collections, languages, languageNames = {} } = await readBody(req);
-        const token = await stTokenGet(false);
         for (const code of languages)
           if (!state.languages.some((l) => l.code === code)) state.languages.push({ code, name: languageNames[code] ?? code });
+        // Remembered for "Check for updates".
+        const prev = state.stImport ?? { collections: [], languages: [] };
+        const cols = [...prev.collections.filter((c) => !collections.some((n) => n.id === c.id)), ...collections];
+        state.stImport = { collections: cols, languages: [...new Set([...prev.languages, ...languages])], lastSync: prev.lastSync ?? null };
         db.saveState();
-        importStatus = { running: true, done: 0, total: 0, message: 'Starting…', error: '' };
-        broadcast();
-        songtreasures
-          .importCollections({
-            token,
-            collections,
-            languages,
-            dataDir,
-            save: (song) => db.saveSong(song),
-            progress: (p) => {
-              importStatus = { ...importStatus, ...p };
-              broadcast();
-            },
-          })
-          .then((r) => {
-            importStatus = { running: false, done: r.total, total: r.total, message: `Imported ${r.imported} of ${r.total} songs.`, error: '' };
-          })
-          .catch((e) => {
-            importStatus = { ...importStatus, running: false, error: e.message };
-          })
-          .finally(() => {
-            songsVersion++;
-            broadcast();
-          });
-        return sendJson(res, 202, { ok: true });
+        return startImport({ collections, languages }, null, res);
+      }
+      if (route === 'resync' && req.method === 'POST') {
+        let cfg = state.stImport;
+        const imported = db.listSongs().filter((s) => s.source === 'songtreasures');
+        if (!cfg?.collections?.length && imported.length) {
+          // Imports from before stImport existed: rebuild the config from the stored songs.
+          const names = new Set(imported.map((s) => s.collection));
+          const all = await songtreasures.listCollections(await stTokenGet(false), dataDir);
+          const langs = [...new Set(imported.flatMap((s) => Object.keys(s.lyrics)))];
+          const order = state.languages.map((l) => l.code);
+          langs.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+          cfg = state.stImport = { collections: all.filter((c) => names.has(c.name)), languages: langs, lastSync: null };
+          db.saveState();
+        }
+        if (!cfg?.collections?.length) return sendJson(res, 400, { error: 'Import a collection first.' });
+        const known = new Map(db.listSongs().filter((s) => s.source === 'songtreasures').map((s) => [s.id, s.remoteUpdatedAt ?? null]));
+        return startImport(cfg, known, res);
       }
       return sendJson(res, 404, { error: 'not found' });
     } catch (e) {

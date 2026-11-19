@@ -76,6 +76,8 @@ export interface Profile {
     rule: boolean;
     ruleColor: string;
   };
+  /** Region used for header + lyrics, in % of the canvas. The background still fills the canvas. */
+  area: { x: number; y: number; w: number; h: number };
   background: { type: 'color' | 'transparent'; color: string };
   transitionMs: number;
   showVerseLabel: boolean;
@@ -92,5 +94,6 @@ export interface AppState {
   languages: Language[];
   server: { port: number; ips: string[]; hostname: string };
   songsVersion: number;
+  stImport: { collections: { id: string; name: string }[]; languages: string[]; lastSync: string | null } | null;
   importStatus: { running: boolean; done: number; total: number; message: string; error: string };
 }

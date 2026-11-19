@@ -54,6 +54,16 @@
     }
   }
 
+  async function resync() {
+    error = '';
+    try {
+      await api('resync', {});
+    } catch (e) {
+      error = (e as Error).message;
+    }
+  }
+  let cfg = $derived(app.state!.stImport);
+
   async function startImport() {
     error = '';
     try {
@@ -93,7 +103,16 @@
 </script>
 
 <div class="st">
-  <h2>Import from SongTreasures</h2>
+  <h2>SongTreasures</h2>
+  {#if available && (cfg?.collections.length || app.songs.some((x) => x.id.startsWith('st:')))}
+    <div class="sync">
+      <button class="primary" disabled={status.running} onclick={resync}>{status.running ? 'Working…' : 'Check for updates'}</button>
+      <p class="muted small">
+        {#if cfg}{cfg.collections.map((c) => c.name).join(', ')} · {cfg.languages.join(', ').toUpperCase()}{:else}Imported collections{/if}
+        {#if cfg?.lastSync}<br />Last checked {new Date(cfg.lastSync).toLocaleString()}{/if}
+      </p>
+    </div>
+  {/if}
   {#if !available}
     <p class="muted small">Available in the desktop app.</p>
   {:else if !collections.length}
@@ -133,6 +152,7 @@
 </div>
 
 <style>
+  .sync { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .st { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
   .cols { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow: auto; }
   label { display: flex; gap: 6px; align-items: center; font-size: 13px; }

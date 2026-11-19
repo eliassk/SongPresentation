@@ -89,7 +89,10 @@ function expandChorus(order) {
   return out;
 }
 
-async function importCollections({ token, collections, languages, dataDir, save, progress }) {
+/**
+ * Imports whole collections. With `known` (id → remoteUpdatedAt), unchanged songs are skipped.
+ */
+async function importCollections({ token, collections, languages, dataDir, save, progress, known = null }) {
   const dump = dumper(dataDir);
   const contributors = new Map();
   const copyrights = new Map();
@@ -100,6 +103,8 @@ async function importCollections({ token, collections, languages, dataDir, save,
   let done = 0;
   let total = 0;
   let imported = 0;
+  let added = 0;
+  let unchanged = 0;
   for (const col of collections) {
     // Titles come back in the requested language, so fetch the list once per language.
     const byLang = {};
@@ -114,6 +119,11 @@ async function importCollections({ token, collections, languages, dataDir, save,
       for (let s = queue.shift(); s; s = queue.shift()) {
         try {
           if (s.hasLyrics === false) continue;
+          const prev = known?.get(`st:${s.id}`);
+          if (known && prev && prev === s.updatedAt) {
+            unchanged++;
+            continue;
+          }
           const lyrics = {};
           let order = [];
           const available = new Set(s.languages ?? languages);
@@ -164,8 +174,10 @@ async function importCollections({ token, collections, languages, dataDir, save,
             order: expandChorus(order),
             lyrics,
             source: 'songtreasures',
+            remoteUpdatedAt: s.updatedAt ?? null,
           });
           imported++;
+          if (known && !known.has(`st:${s.id}`)) added++;
         } finally {
           done++;
           if (done % 5 === 0 || done === total) progress({ done, total, message: `${col.name}: ${done}/${total}` });
@@ -174,7 +186,7 @@ async function importCollections({ token, collections, languages, dataDir, save,
     };
     await Promise.all(Array.from({ length: 8 }, worker));
   }
-  return { imported, total };
+  return { imported, total, added, unchanged };
 }
 
 module.exports = { listCollections, importCollections };
