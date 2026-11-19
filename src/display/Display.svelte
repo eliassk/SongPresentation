@@ -104,8 +104,8 @@
             {#if h.showNumber && song.number != null}
               <span class="num" style:font-size="{h.numberSize}px">{song.number}</span>
             {/if}
-            {#if h.showTitle}
-              <span class="title" style:font-size="{h.creditsSize * 1.3}px">{title}</span>
+            {#if h.showTitle || song.number == null}
+              <span class="title" style:font-size="{song.number == null ? h.numberSize * 0.55 : h.creditsSize * 1.3}px">{title}</span>
             {/if}
           </div>
           {#if h.showCredits}
@@ -135,7 +135,7 @@
             >
               <div
                 class="inner"
-                class:labelled={profile.showVerseLabel}
+                class:labelled={profile.showVerseLabel && song.number != null}
                 style:text-align={profile.layout.textAlign}
                 style:color={i > 0 && profile.text.secondaryColor ? profile.text.secondaryColor : s.color}
                 style:font-style={s.italic ? 'italic' : 'normal'}
@@ -143,7 +143,7 @@
                 style:font-size="calc(var(--fs) * {s.scale})"
                 style:line-height={profile.text.lineHeight}
               >
-                {#if profile.showVerseLabel}<div class="label">{verseLabel(key)}</div>{/if}
+                {#if profile.showVerseLabel && song.number != null}<div class="label">{verseLabel(key)}</div>{/if}
                 <div class="lines">
                   {#each song.lyrics[l]?.[key] ?? [] as line}
                     <div class="line">{line}</div>

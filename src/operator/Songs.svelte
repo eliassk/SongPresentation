@@ -54,6 +54,25 @@
     msg = '';
   }
 
+  // Slides reuse the song model: no number, one part per screen.
+  function newSlide(kind: 'info' | 'bible') {
+    original = null;
+    const bible = kind === 'bible';
+    draft = {
+      number: '',
+      collection: bible ? 'Bible readings' : 'Announcements',
+      collectionKey: bible ? 'BIB' : 'INFO',
+      author: '',
+      year: '',
+      composer: '',
+      copyright: '',
+      key: '',
+      title: {},
+      text: Object.fromEntries(langs.map((l) => [l.code, bible ? '[1]\n\n[2]\n' : '[1]\n'])),
+    };
+    msg = bible ? 'Title = reference (e.g. Jan 3:16). Paste the text; start a new screen with [2], [3]…' : 'One screen per [1], [2]…';
+  }
+
   function newSong() {
     original = null;
     draft = { number: '', collection: '', collectionKey: '', author: '', year: '', composer: '', copyright: '', key: '', title: {}, text: {} };
@@ -111,6 +130,10 @@
         <div class="row">
           <input class="grow" placeholder="Filter by number, title or line" bind:value={q} aria-label="Filter songs" />
           <button class="primary" onclick={newSong}>New song</button>
+        </div>
+        <div class="row">
+          <button class="grow" onclick={() => newSlide('info')}>New announcement</button>
+          <button class="grow" onclick={() => newSlide('bible')}>New Bible reading</button>
         </div>
       </div>
       <div class="list">

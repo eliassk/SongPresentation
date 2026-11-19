@@ -48,6 +48,8 @@ export function songName(s: { number?: number | null; title: Record<string, stri
 export function displayUrls(profileId: string): string[] {
   const srv = app.state?.server;
   if (!srv) return [];
-  const hosts = [...srv.ips, 'localhost'];
+  // name.local survives IP changes where mDNS works (macOS, Windows 10+). The IP is the safe default.
+  const local = srv.hostname ? `${srv.hostname.replace(/\.local$/i, '').toLowerCase()}.local` : null;
+  const hosts = [...srv.ips, ...(local ? [local] : []), 'localhost'];
   return hosts.map((h) => `http://${h}:${srv.port}/display/${encodeURIComponent(profileId)}`);
 }

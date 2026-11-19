@@ -92,6 +92,8 @@ export interface AppState {
   live: { songId: string | null; slideIndex: number; blank: boolean };
   liveSong: Song | null;
   setlist: string[];
+  setlistName: string;
+  savedSetlists: { id: string; name: string; ids: string[] }[];
   /** Disabled slide indexes per song id. */
   disabled: Record<string, number[]>;
   profiles: Profile[];

@@ -156,6 +156,29 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     setlist({ ids }) {
       state.setlist = ids;
     },
+    setlistSave({ name }) {
+      const n = String(name || '').trim() || new Date().toISOString().slice(0, 10);
+      const existing = state.savedSetlists.find((x) => x.name === n);
+      if (existing) existing.ids = [...state.setlist];
+      else state.savedSetlists.unshift({ id: crypto.randomBytes(4).toString('hex'), name: n, ids: [...state.setlist] });
+      state.setlistName = n;
+    },
+    setlistLoad({ id }) {
+      const x = state.savedSetlists.find((s) => s.id === id);
+      if (!x) return;
+      state.setlist = x.ids.filter((sid) => db.getSong(sid));
+      state.setlistName = x.name;
+    },
+    setlistDelete({ id }) {
+      state.savedSetlists = state.savedSetlists.filter((s) => s.id !== id);
+    },
+    setlistRename({ name }) {
+      state.setlistName = String(name ?? '');
+    },
+    setlistNew() {
+      state.setlist = [];
+      state.setlistName = '';
+    },
     setlistStep({ delta }) {
       if (!state.setlist.length) return;
       const i = state.setlist.indexOf(state.live.songId);
@@ -312,8 +335,34 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     return sendJson(res, 405, { error: 'method not allowed' });
   }
 
+  // Printable setlist for musicians. Opens in the system browser.
+  function servePrint(res) {
+    const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const langs = state.languages.map((l) => l.code);
+    const rows = state.setlist
+      .map((id) => db.getSong(id))
+      .filter(Boolean)
+      .map((s, i) => {
+        const titles = langs.map((l) => s.title?.[l]).filter(Boolean);
+        return `<tr><td class="i">${i + 1}</td><td class="c">${esc(s.collectionKey)} ${esc(s.number ?? '')}</td><td><b>${esc(titles[0] ?? '')}</b>${titles[1] ? `<br><span>${esc(titles[1])}</span>` : ''}</td><td class="k">${esc(s.key ?? '')}</td></tr>`;
+      })
+      .join('');
+    const html = `<!doctype html><meta charset="utf-8"><title>${esc(state.setlistName || 'Setlist')}</title>
+<style>body{font:15px/1.4 system-ui,sans-serif;margin:40px;color:#1d1c1a}h1{font-size:22px;margin:0 0 16px}table{border-collapse:collapse;width:100%}td{padding:10px 8px;border-bottom:1px solid #ddd;vertical-align:top}.i,.k{width:2em;color:#777}.c{width:6em;color:#8a6a32;font-weight:600}span{color:#777}@media print{body{margin:16mm}}</style>
+<h1>${esc(state.setlistName || 'Setlist')}</h1><table>${rows || '<tr><td>Empty setlist</td></tr>'}</table><script>print()</script>`;
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+  }
+
   function serveStatic(res, pathname) {
-    let file = pathname === '/' ? 'index.html' : pathname.startsWith('/display') ? 'display.html' : pathname.slice(1);
+    let file =
+      pathname === '/'
+        ? 'index.html'
+        : pathname.startsWith('/display')
+          ? 'display.html'
+          : pathname === '/remote'
+            ? 'remote.html'
+            : pathname.slice(1);
     if (pathname.startsWith('/assets/')) file = pathname.slice(1);
     const full = path.normalize(path.join(distDir, file));
     if (!full.startsWith(path.normalize(distDir))) {
@@ -334,6 +383,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     const url = new URL(req.url, 'http://x');
     try {
       if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
+      if (url.pathname === '/print/setlist') return servePrint(res);
       serveStatic(res, url.pathname);
     } catch (e) {
       sendJson(res, 500, { error: String(e.message ?? e) });

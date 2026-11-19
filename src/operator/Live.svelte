@@ -112,6 +112,22 @@
   }
   const summary = (id: string) => app.songs.find((s) => s.id === id);
 
+  // Typing MUST NOT be overwritten by unrelated state broadcasts.
+  let setlistName = $state(untrack(() => app.state!.setlistName));
+  let lastServerName = untrack(() => app.state!.setlistName);
+  $effect(() => {
+    const n = st.setlistName;
+    if (n !== lastServerName) {
+      lastServerName = n;
+      setlistName = n;
+    }
+  });
+  function loadSetlist(e: Event) {
+    const id = (e.currentTarget as HTMLSelectElement).value;
+    if (id) link.send('setlistLoad', { id });
+    (e.currentTarget as HTMLSelectElement).value = '';
+  }
+
   // Click shows only that language. Shift/Cmd/Ctrl-click adds or removes it (multi-column).
   function pickLanguage(p: { id: string; languages: string[] }, code: string, e: MouseEvent) {
     let next: string[];
@@ -186,6 +202,18 @@
 
     <div class="card pad">
       <div class="row head"><h2 class="grow">Setlist</h2><span class="hint">N / P</span></div>
+      <div class="setbar">
+        <input class="grow" placeholder="Service name, e.g. Sunday 22.11" bind:value={setlistName} aria-label="Setlist name" />
+        <button title="Save setlist" onclick={() => link.send('setlistSave', { name: setlistName })}>Save</button>
+      </div>
+      <div class="setbar">
+        <select class="grow" onchange={loadSetlist} aria-label="Load saved setlist">
+          <option value="">Load saved… ({st.savedSetlists.length})</option>
+          {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} items</option>{/each}
+        </select>
+        <button title="Start an empty setlist" onclick={() => link.send('setlistNew')}>New</button>
+        <a class="printlink" href="/print/setlist" target="_blank" title="Print for musicians">Print</a>
+      </div>
       {#each st.setlist as id, i (id)}
         {@const s = summary(id)}
         <div class="item" class:sel={selected?.id === id} class:islive={st.live.songId === id}>
@@ -341,6 +369,10 @@
         </div>
       {/each}
       <p class="hint nomargin">Click a language to show only it. Shift-click to add a second column.</p>
+      <div class="display">
+        <div class="row"><strong class="grow">Phone remote</strong><span class="muted small">for the worship leader</span></div>
+        <a class="url" href={displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]} target="_blank">{displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]}</a>
+      </div>
     </div>
   </section>
 </div>
@@ -391,6 +423,9 @@
   .search :global(svg) { position: absolute; left: 10px; pointer-events: none; }
   .search input { width: 100%; padding-left: 32px; padding-right: 34px; }
   .search kbd { position: absolute; right: 8px; }
+  .setbar { display: flex; gap: 6px; margin-bottom: 6px; }
+  .setbar button, .setbar select, .setbar input { font-size: 13px; padding: 5px 8px; }
+  .printlink { font-size: 13px; color: var(--accent-ink); align-self: center; padding: 0 4px; text-underline-offset: 3px; }
   .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }
 
   .col > .list { flex: 1 1 0; flex-shrink: 1; min-height: 200px; overflow: auto; padding: 6px; }

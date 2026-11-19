@@ -85,6 +85,8 @@ const languages = () => [
 const state = () => ({
   live: { songId: null, slideIndex: 0, blank: false },
   setlist: [],
+  setlistName: '',
+  savedSetlists: [],
   disabled: {},
   profiles: profiles(),
   languages: languages(),

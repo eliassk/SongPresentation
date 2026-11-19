@@ -7,7 +7,7 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n vite,app \"vite build --watch --mode development\" \"wait-on dist/index.html dist/display.html && electron .\"",
+    "dev": "concurrently -k -n vite,app \"vite build --watch --mode development\" \"wait-on dist/index.html dist/display.html dist/remote.html && electron .\"",
     "server": "vite build && node server/server.cjs",
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json",
