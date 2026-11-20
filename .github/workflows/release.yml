@@ -27,12 +27,30 @@ jobs:
           v=$(node -p "require('./package.json').version")
           [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match version $v"; exit 1; }
       - run: npm ci
-      - run: npm run release
+      # Signing env vars MUST be absent, not empty: electron-builder reads an empty CSC_LINK as a path.
+      - name: Load macOS signing secrets
+        if: runner.os == 'macOS' && env.MAC_CERT != ''
+        shell: bash
+        env:
+          MAC_CERT: ${{ secrets.MAC_CERT_P12_BASE64 }}
+        run: |
+          {
+            echo "CSC_LINK=${{ secrets.MAC_CERT_P12_BASE64 }}"
+            echo "CSC_KEY_PASSWORD=${{ secrets.MAC_CERT_PASSWORD }}"
+            echo "APPLE_ID=${{ secrets.APPLE_ID }}"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}"
+            echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}"
+            echo "SIGNED=1"
+          } >> "$GITHUB_ENV"
+      - name: Build and publish
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing and notarization. macOS only installs signed updates.
-          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERT_P12_BASE64 || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERT_PASSWORD || '' }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          extra=""
+          # Without a certificate the macOS build is unsigned. It installs, but cannot auto-update.
+          if [ "$RUNNER_OS" = "macOS" ] && [ -z "$SIGNED" ]; then
+            extra="-c.mac.identity=null -c.mac.notarize=false"
+          fi
+          npx vite build
+          npx electron-builder --publish always $extra
