@@ -84,8 +84,12 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     return t;
   }
 
+  // Text size each display fitted to. Reported by the displays, not saved.
+  const fitted = {};
+
   const fullState = () => ({
     ...state,
+    fitted,
     liveSong: state.live.songId ? db.getSong(state.live.songId) : null,
     songsVersion,
     importStatus,
@@ -247,8 +251,18 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     fontStep({ id, delta }) {
       const p = state.profiles.find((x) => x.id === id);
       if (!p) return;
-      const k = p.text.autoFit ? 'maxSize' : 'size';
-      p.text[k] = Math.max(10, p.text[k] + delta);
+      if (!p.text.autoFit) {
+        p.text.size = Math.max(10, p.text.size + delta);
+        return;
+      }
+      // Step from the size the display really uses. Stepping the max alone shows no change while it is above the fitted size.
+      const base = Math.min(p.text.maxSize, fitted[id] ?? p.text.maxSize);
+      p.text.maxSize = Math.max(10, base + delta);
+      if (p.text.minSize > p.text.maxSize) p.text.minSize = p.text.maxSize;
+    },
+    fitted({ id, size }) {
+      if (typeof size !== 'number' || fitted[id] === size) return false;
+      fitted[id] = size;
     },
     languagesSet({ languages }) {
       state.languages = languages;
@@ -444,7 +458,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       }
       const fn = actions[msg.type];
       if (!fn) return;
-      fn(msg);
+      if (fn(msg) === false) return;
       db.saveState();
       broadcast();
     });

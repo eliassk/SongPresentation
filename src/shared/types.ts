@@ -102,6 +102,8 @@ export interface AppState {
   disabled: Record<string, number[]>;
   /** Operator annotations per song id, then verse key. Kept off the song so re-imports keep them. */
   notes: Record<string, Record<string, VerseNote>>;
+  /** Text size each display fitted to, in px. */
+  fitted?: Record<string, number>;
   /** Marks a line click cycles through. */
   markPresets: string[];
   profiles: Profile[];

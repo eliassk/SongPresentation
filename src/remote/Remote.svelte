@@ -102,15 +102,15 @@
   .grow { flex: 1; min-width: 0; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: #d6343c; }
   .dot.ok { background: #3fb950; }
-  .pos { color: #e9c46a; font-weight: 700; }
+  .pos { color: #cfcfcf; font-weight: 700; }
   .now { background: #2a2824; border-radius: 14px; padding: 16px; font-size: 19px; min-height: 120px; }
   .now.blank { opacity: 0.5; }
   .next { background: #2a2824; border-radius: 14px; padding: 12px 16px; color: #a9a397; }
   .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tag { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #e9c46a; margin-bottom: 4px; }
+  .tag { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #cfcfcf; margin-bottom: 4px; }
   .muted { color: #8f897f; }
-  .note { font-size: 14px; font-style: italic; color: #e9c46a; margin-bottom: 6px; }
-  .mark { font-size: 11px; font-weight: 700; text-transform: uppercase; background: #c4a066; color: #1f1e1b; border-radius: 4px; padding: 1px 5px; margin-right: 8px; vertical-align: 2px; }
+  .note { font-size: 14px; font-style: italic; color: #cfcfcf; margin-bottom: 6px; }
+  .mark { font-size: 11px; font-weight: 700; text-transform: uppercase; background: #cfcfcf; color: #1f1e1b; border-radius: 4px; padding: 1px 5px; margin-right: 8px; vertical-align: 2px; }
   .transport { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
   button {
     font: inherit;
@@ -124,7 +124,7 @@
   }
   button:active { transform: scale(0.98); }
   .transport button { font-size: 22px; padding: 28px 16px; }
-  .next-btn { background: #c4a066; color: #1f1e1b; }
+  .next-btn { background: #cfcfcf; color: #1f1e1b; }
   .blank-btn.on { background: #d6343c; color: #fff; }
   .row { display: flex; gap: 10px; }
   input { font: inherit; font-size: 18px; width: 100%; min-width: 0; background: #2a2824; color: #f2efe8; border: 1px solid #45413a; border-radius: 14px; padding: 12px 14px; }

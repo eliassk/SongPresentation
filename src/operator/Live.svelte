@@ -444,7 +444,7 @@
             <span class="muted small num">{p.width}×{p.height}</span>
             <div class="seg">
               <button class="icon" title="Smaller text" aria-label="Smaller text" onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}><Minus size={14} /></button>
-              <span class="seglabel">A</span>
+              <span class="seglabel num" title="Text size on this display">{st.fitted?.[p.id] ?? (p.text.autoFit ? p.text.maxSize : p.text.size)}</span>
               <button class="icon" title="Larger text" aria-label="Larger text" onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}><Plus size={14} /></button>
             </div>
           </div>

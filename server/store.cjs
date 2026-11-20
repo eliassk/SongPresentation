@@ -40,6 +40,14 @@ function open(dataDir) {
     if (!state.profiles.some((p) => p.mode === 'confidence')) state.profiles.push(defaults.confidenceProfile());
     state.confidenceAdded = true;
   }
+  // Once: the old yellow default for Norwegian became grey. A colour the user picked stays.
+  if (!state.greyMigrated) {
+    for (const p of state.profiles) {
+      const st = p.text?.perLanguage?.no;
+      if (st && st.color?.toLowerCase() === '#e9c46a') st.color = '#cfcfcf';
+    }
+    state.greyMigrated = true;
+  }
   const songs = new Map(readJson(songsFile, defaults.songs).map((s) => [s.id, s]));
 
   let stateTimer = null;

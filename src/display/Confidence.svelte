@@ -3,13 +3,14 @@
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel } from '../shared/slides';
 
-  let { profile, song, slideIndex = 0, blank = false, disabled = [], notes }: {
+  let { profile, song, slideIndex = 0, blank = false, disabled = [], notes, onfit }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
     blank?: boolean;
     disabled?: number[];
     notes?: Record<string, VerseNote>;
+    onfit?: (size: number) => void;
   } = $props();
 
   let lang = $derived(profile.languages[0] ?? 'pl');
@@ -77,6 +78,8 @@
     ro.observe(el);
     return () => ro.disconnect();
   });
+
+  $effect(() => onfit?.(size));
 
   let now = $state(new Date());
   const timer = setInterval(() => (now = new Date()), 1000);
@@ -146,7 +149,7 @@
     border-bottom: 2px solid #2a2a2a;
     padding-bottom: 18px;
   }
-  .num { color: #e9c46a; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .num { color: #cfcfcf; font-weight: 700; font-variant-numeric: tabular-nums; }
   .title { flex: 1; color: #d8d4cc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .title.idle { color: #6f6a61; }
   .pos, .clock { font-variant-numeric: tabular-nums; }
@@ -154,7 +157,7 @@
   .current { font-weight: 600; overflow: hidden; min-height: 0; }
   .current.dim { opacity: 0.35; }
   .shadow { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9); }
-  .label { font-size: 0.5em; color: #e9c46a; font-weight: 700; margin-bottom: 6px; }
+  .label { font-size: 0.5em; color: #cfcfcf; font-weight: 700; margin-bottom: 6px; }
   .next {
     font-size: 38px;
     color: #8b877f;
@@ -167,9 +170,9 @@
   .marked { display: flex; align-items: center; gap: 0.6em; }
   .marked .text { flex: 1; min-width: 0; }
   .nowrap .text { white-space: nowrap; overflow: hidden; }
-  .note { text-align: right; font-size: 0.45em; font-style: italic; color: #e9c46a; font-weight: 600; margin-bottom: 6px; }
-  .nnote { font-style: italic; color: #b89a52; }
-  .mark { display: inline-block; font-size: 0.42em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #e9c46a; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
+  .note { text-align: right; font-size: 0.45em; font-style: italic; color: #cfcfcf; font-weight: 600; margin-bottom: 6px; }
+  .nnote { font-style: italic; color: #9a9a9a; }
+  .mark { display: inline-block; font-size: 0.42em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
   .blanked {
     position: absolute;

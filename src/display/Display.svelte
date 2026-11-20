@@ -3,13 +3,14 @@
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel, defaultLangStyle, credits } from '../shared/slides';
 
-  let { profile, song, slideIndex = 0, blank = false, notes }: {
+  let { profile, song, slideIndex = 0, blank = false, notes, onfit }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
     blank?: boolean;
     /** Passed only when the profile shows notes. */
     notes?: Record<string, VerseNote>;
+    onfit?: (size: number) => void;
   } = $props();
 
   let keys = $derived(slideKeys(song));
@@ -75,6 +76,8 @@
     fit();
     document.fonts?.ready.then(fit);
   });
+
+  $effect(() => onfit?.(fontSize));
 
   const style = (l: string) => profile.text.perLanguage[l] ?? defaultLangStyle();
   const h = $derived(profile.header);
@@ -287,8 +290,8 @@
   /* Marks are tied to line positions of the first language, so only the first column shows them. */
   .marked { display: flex; align-items: center; gap: 0.6em; }
   .marked .text { flex: 1; min-width: 0; }
-  .note { text-align: right; font-size: 0.5em; font-style: italic; color: #e9c46a; margin-bottom: 0.2em; }
-  .mark { display: inline-block; font-size: 0.45em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-style: normal; background: #e9c46a; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
+  .note { text-align: right; font-size: 0.5em; font-style: italic; color: #cfcfcf; margin-bottom: 0.2em; }
+  .mark { display: inline-block; font-size: 0.45em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-style: normal; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .line.nowrap {
     white-space: nowrap;
   }

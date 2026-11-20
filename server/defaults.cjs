@@ -29,7 +29,7 @@ function baseProfile(overrides) {
       secondaryColor: '#cfcfcf',
       perLanguage: {
         pl: langStyle('#ffffff'),
-        no: langStyle('#e9c46a'),
+        no: langStyle('#cfcfcf'),
       },
     },
     header: {

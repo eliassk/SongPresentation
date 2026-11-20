@@ -8,10 +8,17 @@
 
   let st = $state<AppState | null>(null);
   let online = $state(false);
-  connect(
+  const link = connect(
     (s) => (st = s),
     (ok) => (online = ok),
   );
+
+  let lastFit = 0;
+  function onfit(size: number) {
+    if (!profile || size === lastFit) return;
+    lastFit = size;
+    link.send('fitted', { id: profile.id, size });
+  }
 
   let profile = $derived(st?.profiles.find((p) => p.id === profileId) ?? st?.profiles[0] ?? null);
 </script>
@@ -24,6 +31,7 @@
     blank={st.live.blank}
     disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
     notes={st.liveSong ? st.notes?.[st.liveSong.id] : undefined}
+    {onfit}
   />
 {:else if !online}
   <div class="wait">SongPresentation: connecting…</div>
