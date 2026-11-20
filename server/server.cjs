@@ -112,6 +112,18 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       .sort((a, b) => (a.number ?? 1e9) - (b.number ?? 1e9));
   }
 
+  function annotation(songId, key) {
+    const song = (state.notes[songId] ??= {});
+    const v = (song[key] ??= { text: '', marks: {} });
+    v.marks ??= {};
+    return v;
+  }
+  function pruneNotes(songId, key) {
+    const v = state.notes[songId]?.[key];
+    if (v && !v.text && !Object.keys(v.marks).length) delete state.notes[songId][key];
+    if (state.notes[songId] && !Object.keys(state.notes[songId]).length) delete state.notes[songId];
+  }
+
   const actions = {
     setLive({ songId, slideIndex = 0 }) {
       const on = enabledIndices(songId);
@@ -144,7 +156,10 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       if (next) actions.setLive({ songId: next.id });
     },
     goNumber({ collectionKey, number }) {
-      const song = collectionSongs(collectionKey).find((s) => String(s.number) === String(number));
+      const key = String(collectionKey ?? '').toLowerCase();
+      const song = db
+        .listSongs()
+        .find((s) => String(s.collectionKey ?? s.collection ?? '').toLowerCase() === key && String(s.number) === String(number));
       if (song) actions.setLive({ songId: song.id });
     },
     blank({ value }) {
@@ -170,7 +185,27 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       state.setlistName = x.name;
     },
     setlistDelete({ id }) {
+      const x = state.savedSetlists.find((s) => s.id === id);
       state.savedSetlists = state.savedSetlists.filter((s) => s.id !== id);
+      if (x && x.name === state.setlistName) {
+        state.setlist = [];
+        state.setlistName = '';
+      }
+    },
+    // Annotations live in state, never on the song, so imports MUST NOT overwrite them.
+    noteSet({ songId, key, text }) {
+      const v = annotation(songId, key);
+      v.text = String(text ?? '');
+      pruneNotes(songId, key);
+    },
+    lineMark({ songId, key, line, mark }) {
+      const v = annotation(songId, key);
+      if (mark) v.marks[line] = String(mark);
+      else delete v.marks[line];
+      pruneNotes(songId, key);
+    },
+    markPresetsSet({ marks }) {
+      if (Array.isArray(marks)) state.markPresets = [...new Set(marks.map((m) => String(m).trim()).filter(Boolean))];
     },
     setlistRename({ name }) {
       state.setlistName = String(name ?? '');

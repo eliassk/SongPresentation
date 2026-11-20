@@ -26,11 +26,14 @@
     return s ? `${s.collectionKey} ${s.number ?? ''} · ${s.title[lang] ?? Object.values(s.title)[0] ?? ''}` : id;
   };
 
+  let notes = $derived(song ? (st?.notes?.[song.id] ?? {}) : {});
   let numberBox = $state('');
   function go(e: Event) {
     e.preventDefault();
-    const key = song?.collectionKey ?? songs[0]?.collectionKey;
-    if (numberBox.trim() && key) link.send('goNumber', { collectionKey: key, number: numberBox.trim() });
+    // "DP112", "dp 112" or "km53" pick the collection. A bare number stays in the live song's collection.
+    const m = numberBox.trim().match(/^([^\d\s]*)\s*(\d+)$/);
+    const key = m?.[1] || song?.collectionKey || songs[0]?.collectionKey;
+    if (m && key) link.send('goNumber', { collectionKey: key, number: m[2] });
     numberBox = '';
   }
 </script>
@@ -44,7 +47,8 @@
 
   <section class="now" class:blank={st?.live.blank}>
     {#if st?.live.blank}<div class="tag">Blanked</div>{/if}
-    {#each lines(keys[idx]) as l}<div>{l}</div>{:else}<div class="muted">Pick a song below.</div>{/each}
+    {#if notes[keys[idx]]?.text}<div class="note">{notes[keys[idx]].text}</div>{/if}
+    {#each lines(keys[idx]) as l, n}<div>{#if notes[keys[idx]]?.marks?.[n]}<span class="mark">{notes[keys[idx]].marks[n]}</span>{/if}{l}</div>{:else}<div class="muted">Pick a song below.</div>{/each}
   </section>
 
   {#if nextIdx !== -1}
@@ -61,7 +65,7 @@
   <div class="row">
     <button class="blank-btn" class:on={st?.live.blank} onclick={() => link.send('blank', {})}>{st?.live.blank ? 'Show' : 'Blank'}</button>
     <form onsubmit={go} class="row grow">
-      <input inputmode="numeric" placeholder="Song no." bind:value={numberBox} aria-label="Song number" />
+      <input autocapitalize="characters" autocomplete="off" placeholder="DP112 or 112" bind:value={numberBox} aria-label="Song number" />
       <button type="submit">Go</button>
     </form>
   </div>
@@ -105,6 +109,8 @@
   .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tag { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #e9c46a; margin-bottom: 4px; }
   .muted { color: #8f897f; }
+  .note { font-size: 14px; font-style: italic; color: #e9c46a; margin-bottom: 6px; }
+  .mark { font-size: 11px; font-weight: 700; text-transform: uppercase; background: #c4a066; color: #1f1e1b; border-radius: 4px; padding: 1px 5px; margin-right: 8px; vertical-align: 2px; }
   .transport { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
   button {
     font: inherit;

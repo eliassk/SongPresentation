@@ -1,14 +1,15 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
-  import type { Profile, Song } from '../shared/types';
+  import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel } from '../shared/slides';
 
-  let { profile, song, slideIndex = 0, blank = false, disabled = [] }: {
+  let { profile, song, slideIndex = 0, blank = false, disabled = [], notes }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
     blank?: boolean;
     disabled?: number[];
+    notes?: Record<string, VerseNote>;
   } = $props();
 
   let lang = $derived(profile.languages[0] ?? 'pl');
@@ -41,7 +42,9 @@
     }
     const fits = (s: number) => {
       el.style.fontSize = s + 'px';
-      return el.scrollHeight <= el.clientHeight + 1;
+      if (el.scrollHeight > el.clientHeight + 1) return false;
+      // With noWrap every line MUST fit its own width.
+      return !t.noWrap || [...el.querySelectorAll<HTMLElement>('.text')].every((x) => x.scrollWidth <= x.clientWidth + 1);
     };
     let lo = Math.min(t.minSize, t.maxSize);
     let hi = t.maxSize;
@@ -62,6 +65,7 @@
     void key;
     void song;
     void nextKey;
+    JSON.stringify(notes);
     fit();
     document.fonts?.ready.then(fit);
   });
@@ -98,6 +102,7 @@
 
   <section
     class="current"
+    class:nowrap={profile.text.noWrap}
     class:dim={blank}
     class:shadow={profile.text.shadow}
     bind:this={current}
@@ -106,14 +111,15 @@
   >
     {#if key}
       {#if profile.showVerseLabel}<div class="label">{verseLabel(key)}</div>{/if}
-      {#each lines(key) as line}<div class="line">{line}</div>{/each}
+      {#if notes?.[key]?.text}<div class="note">{notes[key].text}</div>{/if}
+      {#each lines(key) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[key]?.marks?.[n]}<span class="mark">{notes[key].marks[n]}</span>{/if}</div>{/each}
     {/if}
   </section>
 
   <section class="next" style:line-height={profile.text.lineHeight}>
     {#if nextKey}
-      <div class="nlabel">Next · {verseLabel(nextKey)}</div>
-      {#each lines(nextKey) as line}<div class="line">{line}</div>{/each}
+      <div class="nlabel">Next · {verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
+      {#each lines(nextKey) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[nextKey]?.marks?.[n]}<span class="mark">{notes[nextKey].marks[n]}</span>{/if}</div>{/each}
     {:else if song}
       <div class="nlabel">End of song</div>
     {/if}
@@ -157,6 +163,13 @@
     max-height: 34vh;
     overflow: hidden;
   }
+  /* Marks sit in a right-hand gutter so the lyrics keep their left edge. */
+  .marked { display: flex; align-items: center; gap: 0.6em; }
+  .marked .text { flex: 1; min-width: 0; }
+  .nowrap .text { white-space: nowrap; overflow: hidden; }
+  .note { text-align: right; font-size: 0.45em; font-style: italic; color: #e9c46a; font-weight: 600; margin-bottom: 6px; }
+  .nnote { font-style: italic; color: #b89a52; }
+  .mark { display: inline-block; font-size: 0.42em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #e9c46a; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
   .blanked {
     position: absolute;

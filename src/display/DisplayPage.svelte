@@ -23,6 +23,7 @@
     slideIndex={st.live.slideIndex}
     blank={st.live.blank}
     disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
+    notes={st.liveSong ? st.notes?.[st.liveSong.id] : undefined}
   />
 {:else if !online}
   <div class="wait">SongPresentation: connecting…</div>

@@ -18,6 +18,9 @@
   import EyeOff from '@lucide/svelte/icons/eye-off';
   import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Minus from '@lucide/svelte/icons/minus';
+  import Trash from '@lucide/svelte/icons/trash-2';
+  import ListPlus from '@lucide/svelte/icons/list-plus';
+  import PenLine from '@lucide/svelte/icons/pen-line';
 
   let st = $derived(app.state!);
   let preview = $derived(st.profiles[0]);
@@ -117,6 +120,42 @@
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
     link.send('setlist', { ids });
+  }
+  let savedCurrent = $derived(st.savedSetlists.find((x) => x.name === st.setlistName) ?? null);
+  function deleteSetlist() {
+    if (savedCurrent && confirm(`Delete saved setlist “${savedCurrent.name}”?`)) link.send('setlistDelete', { id: savedCurrent.id });
+  }
+
+  // Annotations
+  let MARKS = $derived(st.markPresets ?? []);
+  let annotate = $state(false);
+  let notes = $derived(selected ? (st.notes?.[selected.id] ?? {}) : {});
+  function cycleMark(key: string, line: number) {
+    if (!selected) return;
+    const cur = notes[key]?.marks?.[line] ?? '';
+    // A custom mark that is not a preset goes back to none.
+    const i = MARKS.indexOf(cur);
+    const next = cur && i === -1 ? '' : (MARKS[i + 1] ?? '');
+    link.send('lineMark', { songId: selected.id, key, line, mark: next });
+  }
+  // window.prompt does not work in Electron, so custom marks are typed inline.
+  let editing = $state<{ key: string; line: number } | null>(null);
+  function customMark(key: string, line: number, e: MouseEvent) {
+    e.preventDefault();
+    editing = { key, line };
+  }
+  function saveCustom(e: Event) {
+    const ed = editing;
+    if (!ed || !selected) return;
+    editing = null;
+    link.send('lineMark', { songId: selected.id, key: ed.key, line: ed.line, mark: (e.currentTarget as HTMLInputElement).value.trim() });
+  }
+  function setPresets(e: Event) {
+    link.send('markPresetsSet', { marks: (e.currentTarget as HTMLInputElement).value.split(',') });
+  }
+  function setNote(key: string, e: Event) {
+    const text = (e.currentTarget as HTMLInputElement).value;
+    if (selected && text !== (notes[key]?.text ?? '')) link.send('noteSet', { songId: selected.id, key, text });
   }
   const summary = (id: string) => app.songs.find((s) => s.id === id);
 
@@ -220,6 +259,7 @@
           {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} items</option>{/each}
         </select>
         <button title="Start an empty setlist" onclick={() => link.send('setlistNew')}>New</button>
+        {#if savedCurrent}<button class="icon" title="Delete saved setlist" aria-label="Delete saved setlist" onclick={deleteSetlist}><Trash size={14} /></button>{/if}
         <a class="printlink" href="/print/setlist" target="_blank" title="Print for musicians">Print</a>
       </div>
       {#each st.setlist as id, i (id)}
@@ -262,6 +302,9 @@
               <span class="num">{[selected.key, verseCount(selected) ? `${verseCount(selected)} verses` : ''].filter(Boolean).join(' · ')}</span>
             </div>
           </div>
+          <button class="golive" disabled={st.setlist.includes(selected.id)} title="Add to setlist" onclick={() => addToSetlist(selected!.id)}>
+            <ListPlus size={16} /> {st.setlist.includes(selected.id) ? 'In setlist' : 'Setlist'}
+          </button>
           <button class="primary golive" onclick={() => goLive(0)}>
             {#if selectedIsLive}<RotateCcw size={16} /> Restart{:else}<Play size={16} /> Show{/if}
             <kbd class="onaccent">↵</kbd>
@@ -277,27 +320,67 @@
             {disabled.size > 0 ? 'Enable all' : 'All enabled'}
           </button>
           <span class="grow"></span>
-          <span class="hint">Click to skip a verse · <Play size={11} /> to show it</span>
+          <span class="hint">{annotate ? 'Click a line to mark it · notes are saved per song' : 'Click to skip a verse'}</span>
+          <button class="toggleall" class:on={annotate} aria-pressed={annotate} onclick={() => (annotate = !annotate)}><PenLine size={14} /> Annotate</button>
         </div>
+        {#if annotate}
+          <label class="presets">
+            <span>Marks</span>
+            <input class="grow" value={MARKS.join(', ')} onchange={setPresets} placeholder="Solo, All, Men, Women" aria-label="Marks a click cycles through, comma separated" />
+            <span class="hint">click a line to cycle · click its tag to type any text</span>
+          </label>
+        {/if}
+        <datalist id="mark-presets">{#each MARKS as m}<option value={m}></option>{/each}</datalist>
         <div class="verses">
           {#each selKeys as k, i}
             {@const off = disabled.has(i)}
             {@const isLive = selectedIsLive && st.live.slideIndex === i}
+            {@const note = notes[k]}
             <div class="verse" class:off class:islive={isLive}>
+              {#if annotate}
+                <div class="vbody">
+                  <div class="vhead">
+                    <strong class="num">{verseLabel(k)}</strong>
+                    <input class="noteinput grow" placeholder="Note, e.g. key change, slower…" value={note?.text ?? ''} onchange={(e) => setNote(k, e)} aria-label="Note for {verseLabel(k)}" />
+                  </div>
+                  <div class="vcols" style:grid-template-columns="repeat({langs.length}, 1fr)">
+                    {#each langs as l, li}
+                      <div class:second={li > 0}>
+                        {#each selected.lyrics[l]?.[k] ?? [] as line, n}
+                          {#if li === 0 && editing?.key === k && editing.line === n}
+                            <div class="markline">
+                              <!-- svelte-ignore a11y_autofocus -->
+                              <input class="markinput" list="mark-presets" autofocus placeholder="Type any text" value={note?.marks?.[n] ?? ''} aria-label="Mark for this line" onfocus={(e) => e.currentTarget.select()}
+                                onkeydown={(e) => { if (e.key === 'Enter') saveCustom(e); if (e.key === 'Escape') editing = null; }}
+                                onblur={saveCustom} />{line}
+                            </div>
+                          {:else if li === 0}
+                            <div class="markline">
+                              <button class="mark" class:empty={!note?.marks?.[n]} title="Click to type your own text" aria-label="Edit mark" onclick={(e) => customMark(k, n, e)}>{note?.marks?.[n] ?? '+'}</button><button class="linetext" onclick={() => cycleMark(k, n)} oncontextmenu={(e) => customMark(k, n, e)} title="Click to cycle: {MARKS.join(', ')}, none">{line}</button>
+                            </div>
+                          {:else}<div>{line}</div>{/if}
+                        {/each}
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {:else}
               <button class="vbody" onclick={() => toggle(i)} aria-pressed={!off} title={off ? 'Enable verse' : 'Skip verse'}>
                 <div class="vhead">
                   <span class="check" class:off><Check size={12} strokeWidth={3} /></span>
                   <strong class="num">{verseLabel(k)}</strong>
                   {#if isLive}<span class="livetag">On screen</span>{/if}
+                  {#if note?.text}<span class="notetag">{note.text}</span>{/if}
                 </div>
                 <div class="vcols" style:grid-template-columns="repeat({langs.length}, 1fr)">
                   {#each langs as l, li}
                     <div class:second={li > 0}>
-                      {#each selected.lyrics[l]?.[k] ?? [] as line}<div>{line}</div>{:else}<div class="muted">No {l.toUpperCase()} text</div>{/each}
+                      {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}</div>{:else}<div class="muted">No {l.toUpperCase()} text</div>{/each}
                     </div>
                   {/each}
                 </div>
               </button>
+              {/if}
               <button class="show" title="Show this verse" aria-label="Show this verse" onclick={() => goLive(i)}><Play size={18} /></button>
             </div>
           {/each}
@@ -321,7 +404,7 @@
       </div>
       <div class="previewwrap">
         <div class="preview" style:aspect-ratio="{preview.width} / {preview.height}">
-          <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} disabled={[...liveDisabled]} checker />
+          <Stage profile={preview} song={st.liveSong} slideIndex={st.live.slideIndex} blank={st.live.blank} disabled={[...liveDisabled]} notes={st.liveSong ? st.notes?.[st.liveSong.id] : undefined} checker />
         </div>
       </div>
       <div class="nowline">
@@ -378,7 +461,7 @@
       {/each}
       <p class="hint nomargin">Click a language to show only it. Shift-click to add a second column.</p>
       <div class="display">
-        <div class="row"><strong class="grow">Phone remote</strong><span class="muted small">for the worship leader</span></div>
+        <div class="row"><strong class="grow">Phone remote</strong></div>
         <a class="url" href={displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]} target="_blank">{displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]}</a>
       </div>
     </div>
@@ -464,6 +547,20 @@
   .golive { padding: 8px 14px; font-size: 14px; border-radius: var(--radius); }
 
   .toggleall { color: var(--text-2); font-size: 13px; }
+  .toggleall.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); }
+  .mark { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #fff; background: var(--accent); border-radius: 4px; padding: 0 5px; margin-right: 8px; line-height: 1.6; vertical-align: 2px; }
+  .mark.empty { background: transparent; color: var(--muted); border: 1px dashed var(--line-strong); }
+  .markline { display: flex; align-items: baseline; line-height: 1.7; border-radius: 4px; }
+  .markline:hover { background: var(--accent-soft); }
+  button.mark { border: none; cursor: text; flex: none; }
+  button.mark:hover { outline: 2px solid var(--accent-line); }
+  .linetext { flex: 1; text-align: left; background: transparent; border: none; padding: 0; font: inherit; font-weight: 400; line-height: 1.7; }
+  .linetext:hover { background: transparent; }
+  .noteinput { font-size: 13px; padding: 4px 8px; }
+  .markinput { font-size: 12px; padding: 1px 6px; width: 9em; margin-right: 8px; }
+  .presets { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+  .presets input { font-size: 13px; padding: 4px 8px; }
+  .notetag { font-size: 12px; color: var(--accent-ink); font-style: italic; }
   .check {
     display: inline-grid;
     place-items: center;

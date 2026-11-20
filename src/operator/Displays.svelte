@@ -4,6 +4,14 @@
   import Stage from '../display/Stage.svelte';
   import { defaultLangStyle } from '../shared/slides';
   import type { Profile, Song } from '../shared/types';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Check from '@lucide/svelte/icons/check';
+  import Trash from '@lucide/svelte/icons/trash-2';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 
   let st = $derived(app.state!);
   let selectedId = $state(untrack(() => app.state!.profiles[0].id));
@@ -92,6 +100,7 @@
 
   // Elements inside the rendered display that can be dragged to resize.
   function onPreviewDown(e: PointerEvent) {
+    if (draft?.mode === 'confidence') return;
     const t = e.target as HTMLElement;
     if (t.closest('.num, .ckey')) beginDrag('numberSize', e);
     else if (t.closest('.credits')) beginDrag('creditsSize', e);
@@ -155,274 +164,413 @@
     'Calibri, Arial, sans-serif',
   ];
 
+  let copied = $state('');
   function copy(text: string) {
     navigator.clipboard?.writeText(text);
+    copied = text;
+    setTimeout(() => copied === text && (copied = ''), 1500);
   }
+
+  // The singers' view ignores layout, header, area and background, so those tabs are hidden for it.
+  let isConf = $derived(draft?.mode === 'confidence');
+  let tabs = $derived(
+    isConf
+      ? (['Text', 'Screen'] as const)
+      : (['Text', 'Languages', 'Layout', 'Header', 'Screen'] as const),
+  );
+  let tab = $state<string>('Text');
+  $effect(() => {
+    if (!(tabs as readonly string[]).includes(tab)) tab = 'Text';
+  });
+  const modeLabel = (p: Profile) => (p.mode === 'confidence' ? 'Singers' : p.background.type === 'transparent' ? 'Overlay' : 'Audience');
 </script>
 
 <div class="displays">
-  <section class="col side">
-    <h2>Display profiles</h2>
-    {#each st.profiles as p (p.id)}
-      <button class="name" class:sel={p.id === selectedId} onclick={() => (selectedId = p.id)}>
-        <span class="pname">{p.name}</span> <span class="muted res">{p.width}×{p.height}</span>
-      </button>
-    {/each}
-    <div class="row">
-      <button onclick={() => link.send('profileAdd', { fromId: selectedId })}>Duplicate</button>
-      <button
-        class="danger"
-        disabled={st.profiles.length < 2}
-        onclick={() => confirm('Delete this display profile?') && link.send('profileDelete', { id: selectedId })}
-      >Delete</button>
+  <!-- Profiles -->
+  <aside class="side">
+    <div class="sidehead">
+      <h2>Displays</h2>
+      <button class="small" title="Duplicate the selected display" onclick={() => link.send('profileAdd', { fromId: selectedId })}><Plus size={14} /> New</button>
+    </div>
+    <div class="plist">
+      {#each st.profiles as p (p.id)}
+        <button class="pcard" class:sel={p.id === selectedId} onclick={() => (selectedId = p.id)}>
+          <span class="pname">{p.name}</span>
+          <span class="pmeta">
+            <span class="badge" class:conf={p.mode === 'confidence'}>{modeLabel(p)}</span>
+            <span class="num">{p.width}×{p.height}</span>
+            <span>{p.languages.map((l) => l.toUpperCase()).join(' · ')}</span>
+          </span>
+        </button>
+      {/each}
     </div>
 
-    <h2>Languages</h2>
-    {#each st.languages as l (l.code)}
-      <div class="muted">{l.code} · {l.name}</div>
-    {/each}
-    <div class="row">
-      <input style="width:60px" placeholder="en" bind:value={newCode} />
-      <input class="grow" placeholder="English" bind:value={newName} />
-      <button onclick={addLanguage}>Add</button>
-    </div>
-  </section>
+    <details class="langs">
+      <summary>Languages <span class="muted">({st.languages.length})</span></summary>
+      <div class="langlist">
+        {#each st.languages as l (l.code)}<span class="pill"><b>{l.code.toUpperCase()}</b> {l.name}</span>{/each}
+      </div>
+      <div class="addlang">
+        <input style="width:56px" placeholder="en" bind:value={newCode} aria-label="Language code" />
+        <input class="grow" placeholder="English" bind:value={newName} aria-label="Language name" />
+        <button onclick={addLanguage}>Add</button>
+      </div>
+    </details>
+  </aside>
 
   {#if draft}
-    <section class="col form">
-      <fieldset>
-        <legend>General</legend>
-        <label>Name <input bind:value={draft.name} /></label>
-        <div class="row">
-          <label>Width <input type="number" bind:value={draft.width} /></label>
-          <label>Height <input type="number" bind:value={draft.height} /></label>
-        </div>
-        <div class="urls">
-          {#each displayUrls(draft.id) as u}
-            <div class="row"><code class="grow">{u}</code><button onclick={() => copy(u)}>Copy</button></div>
-          {/each}
-          <p class="muted small">Add as an OBS Browser Source at {draft.width}×{draft.height}. Turn off "Shutdown source when not visible".</p>
-        </div>
-      </fieldset>
+    <section class="main">
+      <!-- Identity -->
+      <header class="bar">
+        <input class="title" bind:value={draft.name} aria-label="Display name" />
+        <span class="badge" class:conf={isConf}>{modeLabel(draft)}</span>
+        <span class="grow"></span>
+        <button class="ghost" onclick={resetLayout}><RotateCcw size={14} /> Reset</button>
+        <button
+          class="ghost danger"
+          disabled={st.profiles.length < 2}
+          onclick={() => confirm(`Delete “${draft!.name}”?`) && link.send('profileDelete', { id: selectedId })}
+        ><Trash size={14} /> Delete</button>
+      </header>
 
-      <fieldset>
-        <legend>Languages (order = columns)</legend>
-        {#each draft.languages as code, i (code)}
-          {@const s = draft.text.perLanguage[code] ?? defaultLangStyle()}
-          <div class="langrow">
-            <strong>{langName(code)}</strong>
-            <button onclick={() => moveLang(i, -1)}>↑</button>
-            <button onclick={() => moveLang(i, 1)}>↓</button>
-            <button onclick={() => toggleLang(code)}>Remove</button>
+      <div class="work">
+        <!-- Preview -->
+        <div class="previewcol">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="preview editable" class:noarea={isConf} bind:this={previewEl} onpointerdown={onPreviewDown} style:aspect-ratio="{draft.width} / {draft.height}">
+            <Stage
+              profile={draft}
+              song={previewSong}
+              slideIndex={st.liveSong ? st.live.slideIndex : 0}
+              disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
+              notes={previewSong ? st.notes?.[previewSong.id] : undefined}
+              checker
+            />
+            {#if !isConf}
+              <div class="areaframe" style:left="{draft.area.x}%" style:top="{draft.area.y}%" style:width="{draft.area.w}%" style:height="{draft.area.h}%">
+                <div class="grip" title="Drag to move the text area" onpointerdown={(e) => beginDrag('move', e)}>Text area</div>
+                <div class="corner nw" title="Drag to resize" onpointerdown={(e) => beginDrag('nw', e)}></div>
+                <div class="corner se" title="Drag to resize" onpointerdown={(e) => beginDrag('se', e)}></div>
+              </div>
+            {/if}
           </div>
-          {#if draft.text.perLanguage[code]}
-            <div class="row indent">
-              <input type="color" bind:value={draft.text.perLanguage[code].color} />
-              <label class="inline"><input type="checkbox" bind:checked={draft.text.perLanguage[code].italic} /> Italic</label>
-              <label class="inline">Scale <input type="range" min="0.5" max="1.5" step="0.05" bind:value={draft.text.perLanguage[code].scale} /> {s.scale}</label>
-              <label class="inline">Weight
-                <select bind:value={draft.text.perLanguage[code].weight}>
-                  {#each [300, 400, 500, 600, 700, 800] as w}<option value={w}>{w}</option>{/each}
-                </select>
-              </label>
-            </div>
-          {/if}
-        {/each}
-        <div class="row">
-          {#each st.languages.filter((l) => !draft!.languages.includes(l.code)) as l}
-            <button onclick={() => toggleLang(l.code)}>+ {l.name}</button>
-          {/each}
-        </div>
-        <div class="row">
-          <label class="inline"><input type="checkbox" checked={!!draft.text.secondaryColor} onchange={(e) => (draft!.text.secondaryColor = e.currentTarget.checked ? '#cfcfcf' : '')} /> Second language in its own colour</label>
-          {#if draft.text.secondaryColor}<input type="color" bind:value={draft.text.secondaryColor} />{/if}
-        </div>
-        <label class="inline">
-          Missing translation
-          <select bind:value={draft.missingLanguage}>
-            <option value="fallbackSingle">Show available language only</option>
-            <option value="empty">Keep empty column</option>
-          </select>
-        </label>
-      </fieldset>
+          <p class="hint">
+            {st.liveSong ? 'Showing the live song.' : 'Showing a sample song.'}
+            {#if !isConf}Drag the number, credits or lyrics to resize them. Drag the frame to move the text area.{/if}
+            Changes go live immediately.
+          </p>
 
-      <fieldset>
-        <legend>Text area on screen</legend>
-        <p class="muted small">Keeps the text in part of the screen. The background still fills it all.</p>
-        <label>Top {draft.area.y}% <input type="range" min="0" max="90" bind:value={draft.area.y} /></label>
-        <label>Height {draft.area.h}% <input type="range" min="10" max={100 - draft.area.y} bind:value={draft.area.h} /></label>
-        <label>Left {draft.area.x}% <input type="range" min="0" max="90" bind:value={draft.area.x} /></label>
-        <label>Width {draft.area.w}% <input type="range" min="10" max={100 - draft.area.x} bind:value={draft.area.w} /></label>
-        <div class="row">
-          <button onclick={() => (draft!.area = { x: 0, y: 0, w: 100, h: 100 })}>Full screen</button>
-          <button onclick={() => (draft!.area = { x: 5, y: 4, w: 90, h: 60 })}>Upper 60%</button>
+          <div class="links">
+            <div class="linkshead">Open on a screen or add to OBS as a Browser Source at {draft.width}×{draft.height}</div>
+            {#each displayUrls(draft.id) as u}
+              <div class="link">
+                <code>{u}</code>
+                <button class="icon" title="Copy" aria-label="Copy {u}" onclick={() => copy(u)}>{#if copied === u}<Check size={14} />{:else}<Copy size={14} />{/if}</button>
+              </div>
+            {/each}
+          </div>
         </div>
-      </fieldset>
 
-      <fieldset>
-        <legend>Layout</legend>
-        <div class="row">
-          <label>Mode
-            <select bind:value={draft.layout.mode}>
-              <option value="columns">Side by side</option>
-              <option value="stacked">Stacked</option>
-            </select>
-          </label>
-          <label>Vertical
-            <select bind:value={draft.layout.align}>
-              <option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option>
-            </select>
-          </label>
-          <label>Text align
-            <select bind:value={draft.layout.textAlign}>
-              <option value="left">Left</option><option value="center">Center</option>
-            </select>
-          </label>
-        </div>
-        <label>Split (first column) {Math.round(draft.layout.ratio * 100)}%
-          <input type="range" min="0.25" max="0.75" step="0.01" bind:value={draft.layout.ratio} /></label>
-        <label>Padding {draft.layout.padding}px <input type="range" min="0" max="300" bind:value={draft.layout.padding} /></label>
-        <label>Gap {draft.layout.gap}px <input type="range" min="0" max="300" bind:value={draft.layout.gap} /></label>
-        <div class="row">
-          <label class="inline"><input type="checkbox" bind:checked={draft.layout.divider} /> Divider</label>
-          <input type="color" value={draft.layout.dividerColor.slice(0, 7)} oninput={(e) => (draft!.layout.dividerColor = e.currentTarget.value + '55')} />
-        </div>
-      </fieldset>
+        <!-- Settings -->
+        <div class="settings">
+          <div class="tabs" role="tablist">
+            {#each tabs as t}
+              <button role="tab" aria-selected={tab === t} class:sel={tab === t} onclick={() => (tab = t)}>{t}</button>
+            {/each}
+          </div>
 
-      <fieldset>
-        <legend>Text</legend>
-        <label>Font
-          <select bind:value={draft.text.font}>
-            {#each fonts as f}<option value={f}>{f.split(',')[0]}</option>{/each}
-          </select>
-        </label>
-        <label class="inline"><input type="checkbox" bind:checked={draft.text.autoFit} /> Auto-fit text to screen</label>
-        {#if draft.text.autoFit}
-          <label>Max size {draft.text.maxSize}px <input type="range" min="20" max="240" bind:value={draft.text.maxSize} /></label>
-          <label>Min size {draft.text.minSize}px <input type="range" min="8" max="80" bind:value={draft.text.minSize} /></label>
-        {:else}
-          <label>Size {draft.text.size}px <input type="range" min="12" max="240" bind:value={draft.text.size} /></label>
-        {/if}
-        <label>Line height {draft.text.lineHeight} <input type="range" min="0.9" max="2" step="0.05" bind:value={draft.text.lineHeight} /></label>
-        <div class="row">
-          <label class="inline"><input type="checkbox" bind:checked={draft.text.shadow} /> Shadow</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.showVerseLabel} /> Verse label</label>
+          <div class="panel">
+            {#if tab === 'Text'}
+              {#if isConf}
+                <div class="group">
+                  <h3>Language</h3>
+                  <div class="seg wide">
+                    {#each st.languages as l (l.code)}
+                      <button class:sel={draft.languages[0] === l.code} onclick={() => (draft!.languages = [l.code])}>{l.name}</button>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              <div class="group">
+                <h3>Font</h3>
+                <div class="field"><span>Typeface</span>
+                  <select bind:value={draft.text.font}>{#each fonts as f}<option value={f}>{f.split(',')[0].replace(/'/g, '')}</option>{/each}</select>
+                </div>
+                <label class="check"><input type="checkbox" bind:checked={draft.text.autoFit} /> Fit text to the screen</label>
+                {#if draft.text.autoFit}
+                  <label class="check"><input type="checkbox" bind:checked={draft.text.noWrap} /> Keep each line on one line <small>shrinks instead of wrapping</small></label>
+                  <div class="field"><span>Largest</span><input type="range" min="20" max="240" bind:value={draft.text.maxSize} /><output>{draft.text.maxSize}px</output></div>
+                  <div class="field"><span>Smallest</span><input type="range" min="8" max="80" bind:value={draft.text.minSize} /><output>{draft.text.minSize}px</output></div>
+                {:else}
+                  <div class="field"><span>Size</span><input type="range" min="12" max="240" bind:value={draft.text.size} /><output>{draft.text.size}px</output></div>
+                {/if}
+                <div class="field"><span>Line height</span><input type="range" min="0.9" max="2" step="0.05" bind:value={draft.text.lineHeight} /><output>{draft.text.lineHeight}</output></div>
+              </div>
+              <div class="group">
+                <h3>Show</h3>
+                <label class="check"><input type="checkbox" bind:checked={draft.showVerseLabel} /> Verse label <small>1., Ref., Bridge</small></label>
+                <label class="check"><input type="checkbox" bind:checked={draft.text.shadow} /> Text shadow</label>
+                <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> Notes &amp; marks <small>from Annotate: Solo, All…</small></label>
+              </div>
+            {:else if tab === 'Languages'}
+              <div class="group">
+                <h3>Columns <small>in order, left to right</small></h3>
+                {#each draft.languages as code, i (code)}
+                  {@const s = draft.text.perLanguage[code] ?? defaultLangStyle()}
+                  <div class="lang">
+                    <div class="langtop">
+                      <span class="colnum">{i + 1}</span>
+                      <strong class="grow">{langName(code)}</strong>
+                      <button class="icon" aria-label="Move left" disabled={i === 0} onclick={() => moveLang(i, -1)}><ArrowUp size={14} /></button>
+                      <button class="icon" aria-label="Move right" disabled={i === draft.languages.length - 1} onclick={() => moveLang(i, 1)}><ArrowDown size={14} /></button>
+                      <button class="icon" aria-label="Remove {langName(code)}" disabled={draft.languages.length < 2} onclick={() => toggleLang(code)}><X size={14} /></button>
+                    </div>
+                    {#if draft.text.perLanguage[code]}
+                      <div class="langstyle">
+                        <input type="color" bind:value={draft.text.perLanguage[code].color} aria-label="Colour" />
+                        <select bind:value={draft.text.perLanguage[code].weight} aria-label="Weight">
+                          {#each [300, 400, 500, 600, 700, 800] as w}<option value={w}>{({ 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Heavy' } as Record<number, string>)[w]}</option>{/each}
+                        </select>
+                        <label class="check"><input type="checkbox" bind:checked={draft.text.perLanguage[code].italic} /> Italic</label>
+                        <input class="grow" type="range" min="0.5" max="1.5" step="0.05" bind:value={draft.text.perLanguage[code].scale} aria-label="Scale" />
+                        <output>{Math.round(s.scale * 100)}%</output>
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+                {#if st.languages.some((l) => !draft!.languages.includes(l.code))}
+                  <div class="addrow">
+                    {#each st.languages.filter((l) => !draft!.languages.includes(l.code)) as l}
+                      <button class="small" onclick={() => toggleLang(l.code)}><Plus size={13} /> {l.name}</button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+              <div class="group">
+                <h3>Second column</h3>
+                <label class="check">
+                  <input type="checkbox" checked={!!draft.text.secondaryColor} onchange={(e) => (draft!.text.secondaryColor = e.currentTarget.checked ? '#cfcfcf' : '')} />
+                  Same colour for every column after the first
+                  {#if draft.text.secondaryColor}<input type="color" bind:value={draft.text.secondaryColor} aria-label="Secondary colour" />{/if}
+                </label>
+                <div class="field"><span>No translation</span>
+                  <select bind:value={draft.missingLanguage}>
+                    <option value="fallbackSingle">Show only the available language</option>
+                    <option value="empty">Keep an empty column</option>
+                  </select>
+                </div>
+              </div>
+            {:else if tab === 'Layout'}
+              <div class="group">
+                <h3>Arrangement</h3>
+                <div class="field"><span>Languages</span>
+                  <div class="seg">
+                    <button class:sel={draft.layout.mode === 'columns'} onclick={() => (draft!.layout.mode = 'columns')}>Side by side</button>
+                    <button class:sel={draft.layout.mode === 'stacked'} onclick={() => (draft!.layout.mode = 'stacked')}>Stacked</button>
+                  </div>
+                </div>
+                <div class="field"><span>Vertical</span>
+                  <div class="seg">
+                    {#each ['top', 'center', 'bottom'] as const as a}<button class:sel={draft.layout.align === a} onclick={() => (draft!.layout.align = a)}>{a[0].toUpperCase() + a.slice(1)}</button>{/each}
+                  </div>
+                </div>
+                <div class="field"><span>Text align</span>
+                  <div class="seg">
+                    <button class:sel={draft.layout.textAlign === 'left'} onclick={() => (draft!.layout.textAlign = 'left')}>Left</button>
+                    <button class:sel={draft.layout.textAlign === 'center'} onclick={() => (draft!.layout.textAlign = 'center')}>Center</button>
+                  </div>
+                </div>
+                {#if draft.layout.mode === 'columns'}
+                  <div class="field"><span>First column</span><input type="range" min="0.25" max="0.75" step="0.01" bind:value={draft.layout.ratio} /><output>{Math.round(draft.layout.ratio * 100)}%</output></div>
+                {/if}
+              </div>
+              <div class="group">
+                <h3>Spacing</h3>
+                <div class="field"><span>Padding</span><input type="range" min="0" max="300" bind:value={draft.layout.padding} /><output>{draft.layout.padding}px</output></div>
+                <div class="field"><span>Gap</span><input type="range" min="0" max="300" bind:value={draft.layout.gap} /><output>{draft.layout.gap}px</output></div>
+                <label class="check">
+                  <input type="checkbox" bind:checked={draft.layout.divider} /> Divider between languages
+                  {#if draft.layout.divider}<input type="color" value={draft.layout.dividerColor.slice(0, 7)} oninput={(e) => (draft!.layout.dividerColor = e.currentTarget.value + '55')} aria-label="Divider colour" />{/if}
+                </label>
+              </div>
+              <div class="group">
+                <h3>Text area <small>part of the screen used for text</small></h3>
+                <div class="field"><span>Top</span><input type="range" min="0" max="90" bind:value={draft.area.y} /><output>{draft.area.y}%</output></div>
+                <div class="field"><span>Height</span><input type="range" min="10" max={100 - draft.area.y} bind:value={draft.area.h} /><output>{draft.area.h}%</output></div>
+                <div class="field"><span>Left</span><input type="range" min="0" max="90" bind:value={draft.area.x} /><output>{draft.area.x}%</output></div>
+                <div class="field"><span>Width</span><input type="range" min="10" max={100 - draft.area.x} bind:value={draft.area.w} /><output>{draft.area.w}%</output></div>
+                <div class="addrow">
+                  <button class="small" onclick={() => (draft!.area = { x: 0, y: 0, w: 100, h: 100 })}>Full screen</button>
+                  <button class="small" onclick={() => (draft!.area = { x: 5, y: 4, w: 90, h: 60 })}>Upper 60%</button>
+                </div>
+              </div>
+            {:else if tab === 'Header'}
+              <div class="group">
+                <label class="check strong"><input type="checkbox" bind:checked={draft.header.show} /> Show header</label>
+              </div>
+              {#if draft.header.show}
+                <div class="group">
+                  <h3>Contents</h3>
+                  <div class="chips">
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCollection} /> Collection</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showNumber} /> Number</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showTitle} /> Title</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCredits} /> Credits</label>
+                  </div>
+                </div>
+                <div class="group">
+                  <h3>Style</h3>
+                  <div class="field"><span>Number</span><input type="range" min="40" max="300" bind:value={draft.header.numberSize} /><output>{draft.header.numberSize}px</output></div>
+                  <div class="field"><span>Credits</span><input type="range" min="14" max="80" bind:value={draft.header.creditsSize} /><output>{draft.header.creditsSize}px</output></div>
+                  <div class="field"><span>Colour</span><input type="color" bind:value={draft.header.color} aria-label="Header colour" /></div>
+                  <label class="check">
+                    <input type="checkbox" bind:checked={draft.header.rule} /> Line under header
+                    {#if draft.header.rule}<input type="color" value={draft.header.ruleColor.slice(0, 7)} oninput={(e) => (draft!.header.ruleColor = e.currentTarget.value + '66')} aria-label="Line colour" />{/if}
+                  </label>
+                </div>
+              {/if}
+            {:else if tab === 'Screen'}
+              <div class="group">
+                <h3>Resolution</h3>
+                <div class="res">
+                  <input type="number" bind:value={draft.width} aria-label="Width" /><span>×</span><input type="number" bind:value={draft.height} aria-label="Height" />
+                </div>
+                <div class="addrow">
+                  {#each [[1920, 1080], [1280, 720], [3840, 2160], [1024, 768]] as [w, h]}
+                    <button class="small" class:sel={draft.width === w && draft.height === h} onclick={() => { draft!.width = w; draft!.height = h; }}>{w}×{h}</button>
+                  {/each}
+                </div>
+              </div>
+              {#if !isConf}
+                <div class="group">
+                  <h3>Background</h3>
+                  <div class="seg wide">
+                    <button class:sel={draft.background.type === 'transparent'} onclick={() => (draft!.background.type = 'transparent')}>Transparent <small>OBS overlay</small></button>
+                    <button class:sel={draft.background.type === 'color'} onclick={() => (draft!.background.type = 'color')}>Solid colour</button>
+                  </div>
+                  {#if draft.background.type === 'color'}<div class="field"><span>Colour</span><input type="color" bind:value={draft.background.color} aria-label="Background colour" /></div>{/if}
+                </div>
+                <div class="group">
+                  <h3>Transition</h3>
+                  <div class="field"><span>Fade</span><input type="range" min="0" max="1500" step="50" bind:value={draft.transitionMs} /><output>{draft.transitionMs}ms</output></div>
+                </div>
+              {/if}
+              <p class="hint">In OBS, turn off “Shutdown source when not visible” so the display stays connected.</p>
+            {/if}
+          </div>
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Header</legend>
-        <div class="row wrap">
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.show} /> Show</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.showCollection} /> Collection code</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.showNumber} /> Number</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.showTitle} /> Title</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.showCredits} /> Credits</label>
-          <label class="inline"><input type="checkbox" bind:checked={draft.header.rule} /> Line</label>
-        </div>
-        <div class="row">
-          <label class="inline">Text <input type="color" bind:value={draft.header.color} /></label>
-          <label class="inline">Line <input type="color" value={draft.header.ruleColor.slice(0, 7)} oninput={(e) => (draft!.header.ruleColor = e.currentTarget.value + '66')} /></label>
-        </div>
-        <label>Number size {draft.header.numberSize}px <input type="range" min="40" max="300" bind:value={draft.header.numberSize} /></label>
-        <label>Credits size {draft.header.creditsSize}px <input type="range" min="14" max="80" bind:value={draft.header.creditsSize} /></label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Background &amp; transition</legend>
-        <div class="row">
-          <select bind:value={draft.background.type}>
-            <option value="transparent">Transparent (OBS overlay)</option>
-            <option value="color">Solid colour</option>
-          </select>
-          {#if draft.background.type === 'color'}<input type="color" bind:value={draft.background.color} />{/if}
-        </div>
-        <label>Fade {draft.transitionMs}ms <input type="range" min="0" max="1500" step="50" bind:value={draft.transitionMs} /></label>
-      </fieldset>
-    </section>
-
-    <section class="col previewcol">
-      <div class="row">
-        <h2 class="grow">Preview · {draft.width}×{draft.height} {st.liveSong ? '(live song)' : '(sample)'}</h2>
-        <button onclick={resetLayout}>Reset layout</button>
       </div>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="preview editable" bind:this={previewEl} onpointerdown={onPreviewDown} style:aspect-ratio="{draft.width} / {draft.height}">
-        <Stage
-          profile={draft}
-          song={previewSong}
-          slideIndex={st.liveSong ? st.live.slideIndex : 0}
-          disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
-          checker
-        />
-        <div
-          class="areaframe"
-          style:left="{draft.area.x}%"
-          style:top="{draft.area.y}%"
-          style:width="{draft.area.w}%"
-          style:height="{draft.area.h}%"
-        >
-          <div class="grip" title="Drag to move the text area" onpointerdown={(e) => beginDrag('move', e)}>Text area</div>
-          <div class="corner nw" title="Drag to resize" onpointerdown={(e) => beginDrag('nw', e)}></div>
-          <div class="corner se" title="Drag to resize" onpointerdown={(e) => beginDrag('se', e)}></div>
-        </div>
-      </div>
-      <p class="muted small">
-        Drag the song number, credits or lyrics up/right to enlarge, down/left to shrink. Drag the frame's label to move the text area, its corners to resize.
-        Changes go live to every screen showing this profile.
-      </p>
     </section>
   {/if}
 </div>
 
 <style>
-  .displays { height: 100%; display: grid; grid-template-columns: 260px 400px 1fr; background: var(--panel); }
-  .col { padding: 12px; overflow: auto; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid var(--line); }
-  .name { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; text-align: left; background: transparent; border-color: transparent; padding: 6px 8px; }
-  .pname { flex: 1; min-width: 0; }
-  .res { flex: none; font-variant-numeric: tabular-nums; }
-  .name.sel { background: var(--panel-2); border-color: var(--line); }
-  fieldset { border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; margin: 0; }
-  legend { color: var(--accent); font-size: 12px; padding: 0 4px; }
-  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-  label.inline { flex-direction: row; align-items: center; gap: 6px; }
-  .row label { flex: 1; }
-  .row label.inline { flex: none; }
-  .langrow { display: flex; gap: 6px; align-items: center; }
-  .langrow strong { flex: 1; }
-  .langrow button { padding: 2px 8px; }
-  .indent { padding-left: 8px; flex-wrap: wrap; }
-  .wrap { flex-wrap: wrap; }
-  .urls code { font-size: 12px; color: var(--accent); word-break: break-all; }
-  .urls button { padding: 2px 8px; }
-  .preview { position: relative; }
+  .displays { height: 100%; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: var(--bg); }
+
+  /* Sidebar */
+  .side { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .sidehead { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 8px; }
+  .sidehead h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); letter-spacing: 0.02em; }
+  .plist { flex: 1; overflow: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .pcard { display: flex; flex-direction: column; align-items: stretch; gap: 4px; text-align: left; background: transparent; border: 1px solid transparent; padding: 9px 10px; border-radius: var(--radius); }
+  .pcard:hover { background: var(--panel-2); }
+  .pcard.sel { background: var(--accent-soft); border-color: var(--accent-line); }
+  .pname { font-weight: 600; font-size: 14px; color: var(--text); }
+  .pmeta { display: flex; gap: 8px; align-items: center; font-size: 11.5px; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  .badge { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 999px; padding: 1px 7px; }
+  .badge.conf { color: #2d5f8a; background: #eaf2fa; border-color: #c7dbee; }
+
+  .langs { border-top: 1px solid var(--line); padding: 10px 14px 14px; font-size: 13px; }
+  .langs summary { cursor: pointer; font-weight: 600; color: var(--text-2); }
+  .langlist { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+  .pill { background: var(--panel-2); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--text-2); }
+  .addlang { display: flex; gap: 6px; }
+  .addlang input, .addlang button { font-size: 13px; padding: 4px 8px; }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .bar .title { font-size: 18px; font-weight: 700; border-color: transparent; background: transparent; padding: 4px 8px; margin-left: -8px; min-width: 0; width: 22ch; }
+  .bar .title:hover, .bar .title:focus { border-color: var(--line); background: var(--panel); }
+  .grow { flex: 1; min-width: 0; }
+  .ghost { background: transparent; border-color: transparent; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+  .ghost:hover:not(:disabled) { background: var(--panel-2); }
+  .danger:hover:not(:disabled) { color: var(--live); }
+
+  .work { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+  .previewcol { overflow: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .preview { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; box-shadow: var(--shadow-lift); }
+  .editable { user-select: none; touch-action: none; overflow: visible !important; margin-top: 22px; }
+  .editable.noarea { margin-top: 0; overflow: hidden !important; }
+  .hint { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+  .links { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .linkshead { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .link { display: flex; align-items: center; gap: 8px; }
+  .link code { flex: 1; min-width: 0; font-size: 12px; color: var(--accent-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Settings */
+  .settings { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); }
+  .tabs button { background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 10px; font-size: 13px; color: var(--muted); }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.sel { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .panel { flex: 1; overflow: auto; padding: 4px 18px 20px; }
+  .group { padding: 14px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .group:last-child { border-bottom: none; }
+  h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--text-2); letter-spacing: 0.02em; }
+  small { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+
+  .field { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+  .field > span { color: var(--text-2); }
+  .field > select, .field > .seg { grid-column: 2 / 4; }
+  .field > input[type='color'] { justify-self: start; }
+  output { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.4em; text-align: right; }
+  input[type='range'] { width: 100%; accent-color: var(--accent); }
+  input[type='color'] { width: 32px; height: 24px; padding: 0 2px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); cursor: pointer; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+  .check input[type='checkbox'] { accent-color: var(--accent); margin: 0; }
+  .check.strong { font-weight: 600; }
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .seg { display: flex; background: var(--panel-2); border-radius: var(--radius-s); padding: 2px; gap: 2px; }
+  .seg button { flex: 1; border: none; background: transparent; padding: 5px 8px; font-size: 12.5px; color: var(--text-2); border-radius: 5px; }
+  .seg button.sel { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+  .seg.wide button { padding: 7px 8px; }
+
+  .lang { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 8px; }
+  .langtop { display: flex; align-items: center; gap: 4px; }
+  .colnum { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-right: 6px; }
+  .langstyle { display: flex; align-items: center; gap: 8px; }
+  .langstyle select { font-size: 12px; padding: 3px 6px; }
+  .icon { background: transparent; border-color: transparent; padding: 4px; color: var(--muted); display: inline-grid; place-items: center; }
+  .icon:hover:not(:disabled) { color: var(--text); background: var(--panel-2); }
+  .icon:disabled { opacity: 0.3; }
+  .addrow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .small { font-size: 12px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 4px; }
+  .small.sel { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink); }
+  .res { display: flex; align-items: center; gap: 8px; }
+  .res input { width: 90px; }
+  .res span { color: var(--muted); }
+
+  /* Direct manipulation in the preview */
   .areaframe { position: absolute; border: 1px dashed rgba(233, 196, 106, 0.85); pointer-events: none; border-radius: 2px; }
-  .grip {
-    position: absolute;
-    left: -1px;
-    top: -22px;
-    pointer-events: auto;
-    cursor: move;
-    font-size: 11px;
-    font-weight: 600;
-    color: #1d1c1a;
-    background: #e9c46a;
-    border-radius: 4px 4px 0 0;
-    padding: 3px 8px;
-    user-select: none;
-  }
+  .grip { position: absolute; left: -1px; top: -22px; pointer-events: auto; cursor: move; font-size: 11px; font-weight: 600; color: #1d1c1a; background: #e9c46a; border-radius: 4px 4px 0 0; padding: 3px 8px; user-select: none; }
   .corner { position: absolute; width: 12px; height: 12px; background: #e9c46a; border: 2px solid #1d1c1a; border-radius: 3px; pointer-events: auto; }
   .corner.nw { left: -7px; top: -7px; cursor: nwse-resize; }
   .corner.se { right: -7px; bottom: -7px; cursor: nwse-resize; }
-  .editable { user-select: none; touch-action: none; overflow: visible !important; margin-top: 22px; }
-  .editable :global(.num), .editable :global(.ckey), .editable :global(.credits), .editable :global(.body) {
+  .editable:not(.noarea) :global(.num), .editable:not(.noarea) :global(.ckey), .editable:not(.noarea) :global(.credits), .editable:not(.noarea) :global(.body) {
     cursor: ns-resize;
     border-radius: 4px;
     transition: outline-color 120ms;
     outline: 2px solid transparent;
     outline-offset: 4px;
   }
-  .editable :global(.num:hover), .editable :global(.credits:hover), .editable :global(.body:hover) { outline-color: rgba(233, 196, 106, 0.6); }
-  .preview { width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #000; }
-  .small { font-size: 12px; margin: 0; }
+  .editable:not(.noarea) :global(.num:hover), .editable:not(.noarea) :global(.credits:hover), .editable:not(.noarea) :global(.body:hover) { outline-color: rgba(233, 196, 106, 0.6); }
+
+  @media (max-width: 1280px) {
+    .work { grid-template-columns: minmax(0, 1fr) 340px; }
+    .displays { grid-template-columns: 220px minmax(0, 1fr); }
+  }
 </style>

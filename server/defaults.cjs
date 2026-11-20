@@ -20,6 +20,7 @@ function baseProfile(overrides) {
     text: {
       font: "'Inter Variable', 'Segoe UI', Arial, sans-serif",
       autoFit: true,
+      noWrap: false,
       size: 56,
       maxSize: 96,
       minSize: 16,
@@ -47,6 +48,7 @@ function baseProfile(overrides) {
     background: { type: 'color', color: '#111111' },
     transitionMs: 0,
     showVerseLabel: true,
+    showNotes: false,
     missingLanguage: 'fallbackSingle',
     ...overrides,
   };
@@ -88,6 +90,8 @@ const state = () => ({
   setlistName: '',
   savedSetlists: [],
   disabled: {},
+  notes: {},
+  markPresets: ['Solo', 'All', 'Men', 'Women', 'Instr.'],
   profiles: profiles(),
   languages: languages(),
 });

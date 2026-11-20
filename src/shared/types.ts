@@ -59,6 +59,8 @@ export interface Profile {
   text: {
     font: string;
     autoFit: boolean;
+    /** Each lyric line stays on one line. Fit shrinks the text to the widest line. */
+    noWrap: boolean;
     size: number;
     maxSize: number;
     minSize: number;
@@ -85,6 +87,8 @@ export interface Profile {
   background: { type: 'color' | 'transparent'; color: string };
   transitionMs: number;
   showVerseLabel: boolean;
+  /** Show operator notes and line marks. Off by default. */
+  showNotes: boolean;
   missingLanguage: 'fallbackSingle' | 'empty';
 }
 
@@ -96,10 +100,20 @@ export interface AppState {
   savedSetlists: { id: string; name: string; ids: string[] }[];
   /** Disabled slide indexes per song id. */
   disabled: Record<string, number[]>;
+  /** Operator annotations per song id, then verse key. Kept off the song so re-imports keep them. */
+  notes: Record<string, Record<string, VerseNote>>;
+  /** Marks a line click cycles through. */
+  markPresets: string[];
   profiles: Profile[];
   languages: Language[];
   server: { port: number; ips: string[]; hostname: string };
   songsVersion: number;
   stImport: { collections: { id: string; name: string }[]; languages: string[]; lastSync: string | null } | null;
   importStatus: { running: boolean; done: number; total: number; message: string; error: string };
+}
+
+export interface VerseNote {
+  text: string;
+  /** Mark per line index, e.g. "Solo". */
+  marks: Record<number, string>;
 }
