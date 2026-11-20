@@ -3,7 +3,7 @@
 [![Release](https://github.com/eliassk/SongPresentation/actions/workflows/release.yml/badge.svg)](https://github.com/eliassk/SongPresentation/actions/workflows/release.yml)
 [![Latest version](https://img.shields.io/github/v/release/eliassk/SongPresentation)](https://github.com/eliassk/SongPresentation/releases/latest)
 
-Operator app for church services. It shows song lyrics on LAN displays: a **bilingual** LED wall (e.g. Polish | Norwegian, 2048×1024), a single-language stage projector, and a **confidence view** for singers. Songs are imported from SongTreasures.
+Operator app for church services. It shows song lyrics on LAN displays: a **bilingual** LED wall (e.g. Polish | Norwegian, 2048×1024), a single-language stage projector, and a **confidence view** for singers.
 
 ## Install
 
