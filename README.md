@@ -1,6 +1,18 @@
 # SongPresentation
 
+[![Release](https://github.com/eliassk/SongPresentation/actions/workflows/release.yml/badge.svg)](https://github.com/eliassk/SongPresentation/actions/workflows/release.yml)
+[![Latest version](https://img.shields.io/github/v/release/eliassk/SongPresentation)](https://github.com/eliassk/SongPresentation/releases/latest)
+
 Operator app for church services. It shows song lyrics on LAN displays: a **bilingual** LED wall (e.g. Polish | Norwegian, 2048×1024), a single-language stage projector, and a **confidence view** for singers. Songs are imported from SongTreasures.
+
+## Install
+
+Download the latest installer from [Releases](https://github.com/eliassk/SongPresentation/releases/latest):
+
+- **Windows**: `SongPresentation-Setup-<version>.exe`
+- **macOS**: `SongPresentation-<version>.dmg` (or `-arm64.dmg` for Apple silicon)
+
+The app checks for a new version at start and every 4 hours. It asks before downloading, and again before restarting. If you choose **Later**, the update installs when you quit the app.
 
 ## How it works
 
@@ -29,6 +41,27 @@ npm run server     # server only, no Electron (open http://localhost:4000)
 npm run dist:win   # Windows installer → release/
 npm run dist:mac   # macOS dmg → release/
 ```
+
+## Releasing a new version
+
+1. Bump the version: `npm version patch` (or `minor` / `major`). This commits and creates the tag `vX.Y.Z`.
+2. Push the commit and the tag: `git push --follow-tags`.
+3. The **Release** workflow builds the Windows and macOS installers and publishes them as a GitHub Release.
+4. Running apps see the new version on their next check.
+
+The tag MUST match `version` in `package.json`, otherwise the workflow stops.
+
+macOS only installs signed and notarized updates. Set these repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `MAC_CERT_P12_BASE64` | Developer ID Application certificate, exported as `.p12`, then `base64 -i cert.p12` |
+| `MAC_CERT_PASSWORD` | Password of that `.p12` |
+| `APPLE_ID` | Apple ID email of the developer account |
+| `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password from appleid.apple.com |
+| `APPLE_TEAM_ID` | Team ID (`Q9SMQCVNWJ`) |
+
+Windows builds are unsigned. Windows SmartScreen may warn on first install; updates still install.
 
 Data (songs, profiles, setlists) is stored as JSON in the Electron user-data folder (`%APPDATA%\SongPresentation` on Windows). `npm run server` uses `./.data`.
 

@@ -12,7 +12,8 @@
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "dist:win": "vite build && electron-builder --win",
-    "dist:mac": "vite build && electron-builder --mac"
+    "dist:mac": "vite build && electron-builder --mac",
+    "release": "vite build && electron-builder --publish always"
   },
   "build": {
     "appId": "no.koach.songpresentation",
@@ -36,9 +37,13 @@
       "icon": "build/icon.ico"
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.png",
-      "identity": "SEBASTIAN KĘDZIOR (Q9SMQCVNWJ)"
+      "identity": "SEBASTIAN KĘDZIOR (Q9SMQCVNWJ)",
+      "notarize": true
     },
     "directories": {
       "output": "release"
@@ -48,11 +53,20 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "SongPresentation"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "eliassk",
+        "repo": "SongPresentation",
+        "releaseType": "release"
+      }
+    ]
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@lucide/svelte": "^1.76.0",
+    "electron-updater": "^6.8.11",
     "ws": "^8.23.0"
   },
   "devDependencies": {
@@ -66,5 +80,9 @@
     "typescript": "^6.0.3",
     "vite": "^8.3.8",
     "wait-on": "^9.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eliassk/SongPresentation.git"
   }
 }

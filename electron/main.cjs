@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, shell, session } = require('electron');
 const path = require('path');
 const { startServer } = require('../server/server.cjs');
+const { initUpdater } = require('./updater.cjs');
 
 const PORT = Number(process.env.SP_PORT) || 4000;
 
@@ -116,6 +117,8 @@ app.whenReady().then(async () => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  initUpdater(() => win);
 });
 
 app.on('window-all-closed', () => app.quit());
