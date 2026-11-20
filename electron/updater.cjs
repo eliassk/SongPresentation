@@ -18,10 +18,38 @@ function initUpdater(getWindow) {
       defaultId: 0,
       cancelId: 1,
     });
-    if (response === 0) autoUpdater.downloadUpdate().catch(showError);
+    if (response !== 0) return;
+    downloading = true;
+    progress(0);
+    autoUpdater.downloadUpdate().catch(fail);
   });
 
+  // The download runs in the background. Progress MUST be visible, or Download looks like it did nothing.
+  let downloading = false;
+  let baseTitle = null;
+  function progress(pct) {
+    const win = getWindow();
+    if (!win || win.isDestroyed()) return;
+    baseTitle ??= win.getTitle();
+    if (pct === null) {
+      win.setProgressBar(-1);
+      win.setTitle(baseTitle);
+      return;
+    }
+    win.setProgressBar(pct / 100);
+    win.setTitle(`${baseTitle} · Downloading update ${Math.round(pct)}%`);
+  }
+  autoUpdater.on('download-progress', (p) => progress(p.percent));
+  function fail(e) {
+    if (!downloading) return;
+    downloading = false;
+    progress(null);
+    showError(e);
+  }
+
   autoUpdater.on('update-downloaded', async (info) => {
+    downloading = false;
+    progress(null);
     const { response } = await dialog.showMessageBox(getWindow(), {
       type: 'info',
       title: 'Update ready',
@@ -31,11 +59,14 @@ function initUpdater(getWindow) {
       defaultId: 0,
       cancelId: 1,
     });
-    if (response === 0) autoUpdater.quitAndInstall();
+    if (response === 0) setImmediate(() => autoUpdater.quitAndInstall());
   });
 
   // A failed check MUST NOT bother the operator during a service; only a failed download is shown.
-  autoUpdater.on('error', (e) => console.error('Update check failed:', e && e.message));
+  autoUpdater.on('error', (e) => {
+    console.error('Update failed:', e && e.message);
+    fail(e);
+  });
 
   function showError(e) {
     dialog.showErrorBox('Update failed', String((e && e.message) || e));
