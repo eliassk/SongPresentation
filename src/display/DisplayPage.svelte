@@ -20,7 +20,10 @@
     link.send('fitted', { id: profile.id, size });
   }
 
-  let profile = $derived(st?.profiles.find((p) => p.id === profileId) ?? st?.profiles[0] ?? null);
+  // "?bg=transparent" drops the background for this URL only, e.g. as an OBS overlay.
+  const transparent = new URLSearchParams(location.search).get('bg') === 'transparent';
+  let found = $derived(st?.profiles.find((p) => p.id === profileId) ?? st?.profiles[0] ?? null);
+  let profile = $derived(found && transparent ? { ...found, background: { ...found.background, type: 'transparent' as const } } : found);
 </script>
 
 {#if profile && st}
@@ -32,6 +35,7 @@
     disabled={st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []}
     notes={st.liveSong ? st.notes?.[st.liveSong.id] : undefined}
     {onfit}
+    {transparent}
   />
 {:else if !online}
   <div class="wait">SongPresentation: connecting…</div>

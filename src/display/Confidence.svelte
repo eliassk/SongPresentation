@@ -3,7 +3,7 @@
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel } from '../shared/slides';
 
-  let { profile, song, slideIndex = 0, blank = false, disabled = [], notes, onfit }: {
+  let { profile, song, slideIndex = 0, blank = false, disabled = [], notes, onfit, transparent = false }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
@@ -11,6 +11,7 @@
     disabled?: number[];
     notes?: Record<string, VerseNote>;
     onfit?: (size: number) => void;
+    transparent?: boolean;
   } = $props();
 
   let lang = $derived(profile.languages[0] ?? 'pl');
@@ -87,7 +88,7 @@
   let clock = $derived(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 </script>
 
-<div class="conf" style:font-family={profile.text.font}>
+<div class="conf" style:font-family={profile.text.font} style:background={transparent ? 'transparent' : null}>
   <header>
     {#if song}
       <span class="num">{song.collectionKey} {song.number ?? ''}</span>

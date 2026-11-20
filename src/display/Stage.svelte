@@ -3,7 +3,7 @@
   import Confidence from './Confidence.svelte';
   import type { Profile, Song, VerseNote } from '../shared/types';
 
-  let { profile, song, slideIndex = 0, blank = false, checker = false, disabled = [], notes, onfit }: {
+  let { profile, song, slideIndex = 0, blank = false, checker = false, disabled = [], notes, onfit, transparent = false }: {
     profile: Profile;
     song: Song | null;
     slideIndex?: number;
@@ -14,6 +14,8 @@
     notes?: Record<string, VerseNote>;
     /** Displays report their fitted text size so the operator's A−/A+ step from it. */
     onfit?: (size: number) => void;
+    /** No background, even on the singers' view. Set by "?bg=transparent". */
+    transparent?: boolean;
   } = $props();
 
   let w = $state(0);
@@ -30,7 +32,7 @@
     style:transform="translate(-50%, -50%) scale({scale})"
   >
     {#if profile.mode === 'confidence'}
-      <Confidence {profile} {song} {slideIndex} {blank} {disabled} notes={profile.showNotes ? notes : undefined} {onfit} />
+      <Confidence {profile} {song} {slideIndex} {blank} {disabled} notes={profile.showNotes ? notes : undefined} {onfit} {transparent} />
     {:else}
       <Display {profile} {song} {slideIndex} {blank} notes={profile.showNotes ? notes : undefined} {onfit} />
     {/if}

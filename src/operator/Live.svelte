@@ -23,8 +23,22 @@
   import PenLine from '@lucide/svelte/icons/pen-line';
 
   let st = $derived(app.state!);
-  let preview = $derived(st.profiles[0]);
-  let langs = $derived(preview?.languages ?? []);
+  // Which display the on-air card previews. Per operator, so it lives in localStorage.
+  let previewId = $state((() => {
+    try {
+      return localStorage.getItem('previewProfile') ?? '';
+    } catch {
+      return '';
+    }
+  })());
+  $effect(() => {
+    try {
+      localStorage.setItem('previewProfile', previewId);
+    } catch {}
+  });
+  let preview = $derived(st.profiles.find((p) => p.id === previewId) ?? st.profiles[0]);
+  // The song page follows the first display, not the preview choice.
+  let langs = $derived(st.profiles[0]?.languages ?? []);
   let primary = $derived(langs[0] ?? 'pl');
 
   // Library
@@ -399,7 +413,9 @@
     <div class="card onair" class:active={!!st.liveSong && !st.live.blank}>
       <div class="cardhead">
         <span class="badge" class:active={!!st.liveSong && !st.live.blank}><span class="dot"></span>{st.live.blank ? 'Blanked' : st.liveSong ? 'Live' : 'Standby'}</span>
-        <span class="grow small muted">{preview?.name}</span>
+        <select class="grow previewpick" bind:value={previewId} aria-label="Display to preview">
+          {#each st.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+        </select>
         <button class="ghost small" onclick={() => link.send('clear')}>Clear</button>
       </div>
       <div class="previewwrap">
@@ -601,6 +617,8 @@
   .badge.active { color: var(--live); }
   .badge.active .dot { background: var(--live); }
   .previewwrap { padding: 12px 14px 0; }
+  .previewpick { font-size: 12px; color: var(--muted); background: transparent; border-color: transparent; padding: 3px 6px; min-width: 0; }
+  .previewpick:hover { border-color: var(--line); color: var(--text); }
   .preview { width: 100%; border-radius: 8px; overflow: hidden; background: #000; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); }
   .nowline { display: flex; gap: 10px; align-items: baseline; padding: 10px 16px 0; min-height: 30px; }
   .vpos { color: var(--accent-ink); font-weight: 600; }
