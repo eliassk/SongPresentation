@@ -801,8 +801,10 @@
   .preview { width: 100%; border-radius: 8px; overflow: hidden; background: #000; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); }
   .nowline { display: flex; gap: 10px; align-items: baseline; padding: 10px 16px 0; min-height: 30px; }
   .vpos { color: var(--accent-ink); font-weight: 600; }
-  .transport { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; padding: 12px 14px 14px; }
-  .big { padding: 12px 14px; font-size: 15px; font-weight: 600; border-radius: var(--radius); }
+  /* Columns MUST shrink: translated labels are longer than the English ones. */
+  .transport { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 14px 14px; container-type: inline-size; }
+  .big { padding: 12px 8px; font-size: 15px; font-weight: 600; border-radius: var(--radius); min-width: 0; white-space: nowrap; overflow: hidden; gap: 6px; }
+  @container (max-width: 380px) { .big kbd { display: none; } }
   .big.next { background: var(--text); color: #fff; border-color: var(--text); }
   .big.next:hover { background: #000; }
   .blank kbd { margin-left: 2px; }
