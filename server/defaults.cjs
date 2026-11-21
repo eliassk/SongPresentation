@@ -49,6 +49,7 @@ function baseProfile(overrides) {
     transitionMs: 0,
     showVerseLabel: true,
     showNotes: false,
+    blankWithScreens: true,
     missingLanguage: 'fallbackSingle',
     ...overrides,
   };

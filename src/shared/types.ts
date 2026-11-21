@@ -103,6 +103,8 @@ export interface Profile {
   showVerseLabel: boolean;
   /** Show operator notes and line marks. Off by default. */
   showNotes: boolean;
+  /** Singers' view goes black with Blank. Otherwise it dims and shows a badge. */
+  blankWithScreens: boolean;
   missingLanguage: 'fallbackSingle' | 'empty';
 }
 

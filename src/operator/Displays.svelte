@@ -311,6 +311,7 @@
                 <label class="check"><input type="checkbox" bind:checked={draft.showVerseLabel} /> Verse label <small>1., Ref., Bridge</small></label>
                 <label class="check"><input type="checkbox" bind:checked={draft.text.shadow} /> Text shadow</label>
                 <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> Notes &amp; marks <small>from Annotate: Solo, All…</small></label>
+                {#if isConf}<label class="check"><input type="checkbox" bind:checked={draft.blankWithScreens} /> Go black with Blank <small>off: dims and shows a badge</small></label>{/if}
               </div>
             {:else if tab === 'Languages'}
               <div class="group">

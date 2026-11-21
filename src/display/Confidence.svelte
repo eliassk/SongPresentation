@@ -92,6 +92,9 @@
   let clock = $derived(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 </script>
 
+{#if blank && profile.blankWithScreens}
+  <div class="conf black" style:background={transparent ? 'transparent' : null}></div>
+{:else}
 <div class="conf" style:font-family={profile.text.font} style:background={transparent ? 'transparent' : null}>
   <header>
     {#if song && meta}
@@ -134,6 +137,7 @@
     {/if}
   </section>
 </div>
+{/if}
 
 <style>
   .conf {
@@ -182,6 +186,7 @@
   .medley { flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7em; color: #8b877f; border: 1px solid #3a3a3a; border-radius: 999px; padding: 2px 12px; }
   .nsong { color: #cfcfcf; }
   .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
+  .black { background: #000; }
   .blanked {
     position: absolute;
     top: 120px;
