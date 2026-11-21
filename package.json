@@ -1,7 +1,7 @@
 {
   "name": "song-presentation",
   "productName": "SongPresentation",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Bilingual song lyrics presentation for LAN displays and OBS.",
   "main": "electron/main.cjs",
