@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../shared/i18n.svelte';
   import { connect } from '../shared/ws';
   import { slideKeys, verseLabel } from '../shared/slides';
   import type { AppState, SongSummary } from '../shared/types';
@@ -41,37 +42,37 @@
 <main>
   <header>
     <span class="dot" class:ok={online}></span>
-    <strong class="grow">{song ? `${song.collectionKey} ${song.number ?? ''}` : 'Nothing live'}</strong>
+    <strong class="grow">{song ? `${song.collectionKey} ${song.number ?? ''}` : t('Nothing live')}</strong>
     {#if song && keys[idx]}<span class="pos">{verseLabel(keys[idx])}</span>{/if}
   </header>
 
   <section class="now" class:blank={st?.live.blank}>
-    {#if st?.live.blank}<div class="tag">Blanked</div>{/if}
+    {#if st?.live.blank}<div class="tag">{t("Blanked")}</div>{/if}
     {#if notes[keys[idx]]?.text}<div class="note">{notes[keys[idx]].text}</div>{/if}
-    {#each lines(keys[idx]) as l, n}<div>{#if notes[keys[idx]]?.marks?.[n]}<span class="mark">{notes[keys[idx]].marks[n]}</span>{/if}{l}</div>{:else}<div class="muted">Pick a song below.</div>{/each}
+    {#each lines(keys[idx]) as l, n}<div>{#if notes[keys[idx]]?.marks?.[n]}<span class="mark">{notes[keys[idx]].marks[n]}</span>{/if}{l}</div>{:else}<div class="muted">{t("Pick a song below.")}</div>{/each}
   </section>
 
   {#if nextIdx !== -1}
     <section class="next">
-      <div class="tag muted">Next · {verseLabel(keys[nextIdx])}</div>
+      <div class="tag muted">{t("Next ·")} {verseLabel(keys[nextIdx])}</div>
       <div class="clip">{lines(keys[nextIdx])[0] ?? ''}…</div>
     </section>
   {/if}
 
   <div class="transport">
-    <button aria-label="Previous verse" onclick={() => link.send('step', { delta: -1 })}>‹ Prev</button>
-    <button class="next-btn" aria-label="Next verse" onclick={() => link.send('step', { delta: 1 })}>Next ›</button>
+    <button aria-label={t("Previous verse")} onclick={() => link.send('step', { delta: -1 })}>{t("‹ Prev")}</button>
+    <button class="next-btn" aria-label={t("Next verse")} onclick={() => link.send('step', { delta: 1 })}>{t("Next ›")}</button>
   </div>
   <div class="row">
-    <button class="blank-btn" class:on={st?.live.blank} onclick={() => link.send('blank', {})}>{st?.live.blank ? 'Show' : 'Blank'}</button>
+    <button class="blank-btn" class:on={st?.live.blank} onclick={() => link.send('blank', {})}>{st?.live.blank ? t('Show') : t('Blank')}</button>
     <form onsubmit={go} class="row grow">
-      <input autocapitalize="characters" autocomplete="off" placeholder="DP112 or 112" bind:value={numberBox} aria-label="Song number" />
-      <button type="submit">Go</button>
+      <input autocapitalize="characters" autocomplete="off" placeholder={t("DP112 or 112")} bind:value={numberBox} aria-label={t("Song number")} />
+      <button type="submit">{t("Go")}</button>
     </form>
   </div>
 
   {#if st?.setlist.length}
-    <h2>{st.setlistName || 'Setlist'}</h2>
+    <h2>{st.setlistName || t('Setlist')}</h2>
     <ul>
       {#each st.setlist as id (id)}
         <li>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, ui, setUiLang, UI_LANGS, type UiLang } from '../shared/i18n.svelte';
   import { app, loadSongs } from './store.svelte';
   import Live from './Live.svelte';
   import Songs from './Songs.svelte';
@@ -26,27 +27,30 @@
       <span>SongPresentation</span>
     </div>
 
-    <nav aria-label="Sections">
-      {#each tabs as t (t.id)}
-        <button class:sel={tab === t.id} aria-current={tab === t.id ? 'page' : undefined} onclick={() => (tab = t.id)}>
-          {t.label}
+    <nav aria-label={t("Sections")}>
+      {#each tabs as tb (tb.id)}
+        <button class:sel={tab === tb.id} aria-current={tab === tb.id ? 'page' : undefined} onclick={() => (tab = tb.id)}>
+          {t(tb.label)}
         </button>
       {/each}
     </nav>
 
     <div class="status">
+      <select class="uilang" value={ui.lang} onchange={(e) => setUiLang(e.currentTarget.value as UiLang)} aria-label={t('App language')}>
+        {#each UI_LANGS as l (l.code)}<option value={l.code}>{l.code.toUpperCase()} · {l.name}</option>{/each}
+      </select>
       <span class="pill" class:onair={onAir}>
-        <span class="dot"></span>{onAir ? 'On air' : app.state?.live.blank ? 'Blanked' : 'Standby'}
+        <span class="dot"></span>{onAir ? t('On air') : app.state?.live.blank ? t('Blanked') : t('Standby')}
       </span>
       <span class="pill" class:offline={!app.online}>
-        <span class="dot"></span>{app.online ? 'Server online' : 'Reconnecting…'}
+        <span class="dot"></span>{app.online ? t('Server online') : t('Reconnecting…')}
       </span>
     </div>
   </header>
 
   <main>
     {#if !app.state}
-      <p class="muted pad">Connecting to the local server…</p>
+      <p class="muted pad">{t("Connecting to the local server…")}</p>
     {:else if tab === 'live'}
       <Live />
     {:else if tab === 'songs'}
@@ -80,12 +84,14 @@
     background: transparent;
     border-color: transparent;
     padding: 6px 18px;
+    white-space: nowrap;
     color: var(--text-2);
     border-radius: 7px;
   }
   nav button:hover { background: transparent; color: var(--text); }
   nav button.sel { background: var(--panel); color: var(--text); box-shadow: var(--shadow); border-color: transparent; }
-  .status { justify-self: end; display: flex; gap: 8px; }
+  .status { justify-self: end; display: flex; gap: 8px; align-items: center; }
+  .uilang { font-size: 12px; padding: 3px 6px; }
   .pill {
     display: inline-flex;
     align-items: center;

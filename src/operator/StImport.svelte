@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../shared/i18n.svelte';
   import { app } from './store.svelte';
 
   interface Col { id: string; key: string; name: string; languages: string[] }
@@ -106,20 +107,20 @@
   <h2 class="nomargin">SongTreasures</h2>
   {#if available && (cfg?.collections.length || app.songs.some((x) => x.id.startsWith('st:')))}
     <div class="sync">
-      <button class="primary" disabled={status.running} onclick={resync}>{status.running ? 'Working…' : 'Check for updates'}</button>
+      <button class="primary" disabled={status.running} onclick={resync}>{status.running ? t('Working…') : t('Check for updates')}</button>
       <p class="muted small">
-        {#if cfg}{cfg.collections.map((c) => c.name).join(', ')} · {cfg.languages.join(', ').toUpperCase()}{:else}Imported collections{/if}
-        {#if cfg?.lastSync}<br />Last checked {new Date(cfg.lastSync).toLocaleString()}{/if}
+        {#if cfg}{cfg.collections.map((c) => c.name).join(', ')} · {cfg.languages.join(', ').toUpperCase()}{:else}{t("Imported collections")}{/if}
+        {#if cfg?.lastSync}<br />{t("Last checked")} {new Date(cfg.lastSync).toLocaleString()}{/if}
       </p>
     </div>
   {/if}
   {#if !available}
-    <p class="muted small">Available in the desktop app.</p>
+    <p class="muted small">{t("Available in the desktop app.")}</p>
   {:else if !collections.length}
-    {#if checking && !busy}<p class="muted small">Checking for an existing SongTreasures session…</p>{/if}
-    <button class="primary" disabled={busy} onclick={signIn}>{busy ? 'Waiting for sign-in…' : 'Sign in to SongTreasures'}</button>
-    {#if busy}<button onclick={() => fetch('/api/st/cancel', { method: 'POST' })}>Cancel</button>{/if}
-    <p class="muted small">A SongTreasures window opens on top. Sign in there; it closes by itself.</p>
+    {#if checking && !busy}<p class="muted small">{t("Checking for an existing SongTreasures session…")}</p>{/if}
+    <button class="primary" disabled={busy} onclick={signIn}>{busy ? t('Waiting for sign-in…') : t('Sign in to SongTreasures')}</button>
+    {#if busy}<button onclick={() => fetch('/api/st/cancel', { method: 'POST' })}>{t("Cancel")}</button>{/if}
+    <p class="muted small">{t("A SongTreasures window opens on top. Sign in there; it closes by itself.")}</p>
   {:else}
     <div class="cols">
       {#each collections as c (c.id)}
@@ -128,19 +129,19 @@
     </div>
     {#if offered.length}
       <div class="row">
-        <strong class="small grow">Languages</strong>
-        <button class="link" onclick={() => selectAll(true)}>Select all</button>
-        <button class="link" onclick={() => selectAll(false)}>None</button>
+        <strong class="small grow">{t("Languages")}</strong>
+        <button class="link" onclick={() => selectAll(true)}>{t("Select all")}</button>
+        <button class="link" onclick={() => selectAll(false)}>{t("None")}</button>
       </div>
       <div class="langs">
         {#each offered as l (l)}
           <label><input type="checkbox" bind:checked={langs[l]} /> {langName(l)} <span class="muted">{l}</span></label>
         {/each}
       </div>
-      <p class="muted small">The first ticked language in your display profile sets titles and collection codes. Importing all languages takes longer.</p>
+      <p class="muted small">{t("The first ticked language in your display profile sets titles and collection codes. Importing all languages takes longer.")}</p>
     {/if}
     <button class="primary" disabled={!anyPicked || status.running} onclick={startImport}>
-      {status.running ? 'Importing…' : 'Import selected'}
+      {status.running ? t('Importing…') : t('Import selected')}
     </button>
   {/if}
 

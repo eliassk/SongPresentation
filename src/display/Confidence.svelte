@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
+  import { tIn } from '../shared/i18n.svelte';
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel, metaFor, sungLanguages } from '../shared/slides';
 
@@ -103,13 +104,13 @@
       {#if song.parts}<span class="medley">{song.title[lang] ?? Object.values(song.title)[0]}</span>{/if}
       {#if key}<span class="pos">{verseLabel(key)} · {position}/{enabledCount}</span>{/if}
     {:else}
-      <span class="title idle">Waiting for the next song</span>
+      <span class="title idle">{tIn(lang, 'Waiting for the next song')}</span>
     {/if}
     <span class="clock">{clock}</span>
   </header>
 
   {#if blank}
-    <div class="blanked">Screens are blanked</div>
+    <div class="blanked">{tIn(lang, 'Screens are blanked')}</div>
   {/if}
 
   <section
@@ -130,10 +131,10 @@
 
   <section class="next" style:line-height={profile.text.lineHeight}>
     {#if nextKey}
-      <div class="nlabel">Next · {#if nextMeta && nextMeta !== meta}<span class="nsong">{nextMeta.collectionKey ?? ''} {nextMeta.number ?? ''} {nextMeta.title?.[lang] ?? Object.values(nextMeta.title ?? {})[0] ?? ''}</span> · {/if}{verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
+      <div class="nlabel">{tIn(lang, 'Next')} · {#if nextMeta && nextMeta !== meta}<span class="nsong">{nextMeta.collectionKey ?? ''} {nextMeta.number ?? ''} {nextMeta.title?.[lang] ?? Object.values(nextMeta.title ?? {})[0] ?? ''}</span> · {/if}{verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
       {#each lines(nextKey) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[nextKey]?.marks?.[n]}<span class="mark">{notes[nextKey].marks[n]}</span>{/if}</div>{/each}
     {:else if song}
-      <div class="nlabel">End of song</div>
+      <div class="nlabel">{tIn(lang, 'End of song')}</div>
     {/if}
   </section>
 </div>

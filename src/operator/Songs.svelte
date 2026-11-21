@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../shared/i18n.svelte';
   import { app, getSong, saveSong, deleteSong, songName } from './store.svelte';
   import { parseLyrics, formatLyrics } from '../shared/slides';
   import type { Song } from '../shared/types';
@@ -88,11 +89,11 @@
     const saved = await saveSong(song);
     original = saved;
     draft.id = saved.id;
-    msg = 'Saved.';
+    msg = t('Saved.');
   }
 
   async function remove() {
-    if (!draft?.id || !confirm('Delete this song?')) return;
+    if (!draft?.id || !confirm(t('Delete this song?'))) return;
     await deleteSong(draft.id);
     draft = null;
   }
@@ -104,13 +105,13 @@
 
     <div class="card libcard">
       <div class="filters">
-        <select bind:value={collection} aria-label="Collection">
-          <option value="">All collections ({app.songs.length})</option>
+        <select bind:value={collection} aria-label={t("Collection")}>
+          <option value="">{t("All collections (")}{app.songs.length})</option>
           {#each collections as c (c.key)}<option value={c.key}>{c.name} · {c.key}</option>{/each}
         </select>
         <div class="row">
-          <input class="grow" placeholder="Filter by number, title or line" bind:value={q} aria-label="Filter songs" />
-          <button class="primary" onclick={newSong}>New song</button>
+          <input class="grow" placeholder={t("Filter by number, title or line")} bind:value={q} aria-label={t("Filter songs")} />
+          <button class="primary" onclick={newSong}>{t("New song")}</button>
         </div>
       </div>
       <div class="list">
@@ -121,7 +122,7 @@
             <span class="t">{s.title[primary] ?? Object.values(s.title)[0] ?? '(untitled)'}</span>
           </button>
         {:else}
-          <p class="empty">No songs match.</p>
+          <p class="empty">{t("No songs match.")}</p>
         {/each}
       </div>
     </div>
@@ -131,37 +132,37 @@
     {#if draft}
       <div class="card editor">
         <div class="meta">
-          <label>Number <input class="num" bind:value={draft.number} /></label>
-          <label>Collection <input bind:value={draft.collection} /></label>
-          <label>Code <input bind:value={draft.collectionKey} placeholder="DP" /></label>
-          <label>Key <input bind:value={draft.key} /></label>
-          <label>Author <input bind:value={draft.author} /></label>
-          <label>Year <input class="num" bind:value={draft.year} /></label>
-          <label>Composer <input bind:value={draft.composer} /></label>
+          <label>{t("Number")} <input class="num" bind:value={draft.number} /></label>
+          <label>{t("Collection")} <input bind:value={draft.collection} /></label>
+          <label>{t("Code")} <input bind:value={draft.collectionKey} placeholder=DP /></label>
+          <label>{t("Key")} <input bind:value={draft.key} /></label>
+          <label>{t("Author")} <input bind:value={draft.author} /></label>
+          <label>{t("Year")} <input class="num" bind:value={draft.year} /></label>
+          <label>{t("Composer")} <input bind:value={draft.composer} /></label>
           <label>Text © <input bind:value={draft.copyright} /></label>
         </div>
         <p class="muted small">
-          Start each part with <code>[1]</code>, <code>[2]</code>, <code>[c]</code> (chorus), <code>[b]</code> (bridge).
-          Repeat <code>[c]</code> on its own line to repeat the chorus. Matching keys line up across languages.
+          {t("Start each part with")} <code>[1]</code>, <code>[2]</code>, <code>[c]</code> {t("(chorus),")} <code>[b]</code> {t("(bridge).")}
+          {t("Repeat")} <code>[c]</code> {t("on its own line to repeat the chorus. Matching keys line up across languages.")}
         </p>
         <div class="langs" style:grid-template-columns="repeat({Math.min(langs.length, 3)}, 1fr)">
           {#each langs as l (l.code)}
             <div class="lang">
-              <label>Title · {l.name} <input bind:value={draft.title[l.code]} /></label>
+              <label>{t("Title ·")} {l.name} <input bind:value={draft.title[l.code]} /></label>
               <textarea rows="20" bind:value={draft.text[l.code]} placeholder="[1]&#10;First line&#10;Second line"></textarea>
             </div>
           {/each}
         </div>
         <div class="row actions">
-          <button class="primary" onclick={save}>Save song</button>
-          {#if draft.id}<button class="danger" onclick={remove}>Delete</button>{/if}
+          <button class="primary" onclick={save}>{t("Save song")}</button>
+          {#if draft.id}<button class="danger" onclick={remove}>{t("Delete")}</button>{/if}
           <span class="muted">{msg}</span>
         </div>
       </div>
     {:else}
       <div class="card welcome">
-        <h1>Song library</h1>
-        <p class="muted">Pick a song on the left to edit its text, or create a new one. Songs from SongTreasures update with Check for updates.</p>
+        <h1>{t("Song library")}</h1>
+        <p class="muted">{t("Pick a song on the left to edit its text, or create a new one. Songs from SongTreasures update with Check for updates.")}</p>
       </div>
     {/if}
   </section>

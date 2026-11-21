@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../shared/i18n.svelte';
   import { untrack } from 'svelte';
   import { app, link, displayUrls } from './store.svelte';
   import Stage from '../display/Stage.svelte';
@@ -28,7 +29,7 @@
   // A reset happens on the server. The draft MUST reload from it, or the old draft is pushed back.
   let pendingReset: string | null = null;
   function resetLayout() {
-    if (!draft || !confirm('Reset this display to its default layout? Name is kept.')) return;
+    if (!draft || !confirm(t('Reset this display to its default layout? Name is kept.'))) return;
     pendingReset = draft.id;
     link.send('profileReset', { id: draft.id });
   }
@@ -182,15 +183,15 @@
   $effect(() => {
     if (!(tabs as readonly string[]).includes(tab)) tab = 'Text';
   });
-  const modeLabel = (p: Profile) => (p.mode === 'confidence' ? 'Singers' : p.background.type === 'transparent' ? 'Overlay' : 'Audience');
+  const modeLabel = (p: Profile) => t(p.mode === 'confidence' ? 'Singers' : p.background.type === 'transparent' ? 'Overlay' : 'Audience');
 </script>
 
 <div class="displays">
   <!-- Profiles -->
   <aside class="side">
     <div class="sidehead">
-      <h2>Displays</h2>
-      <button class="small" title="Duplicate the selected display" onclick={() => link.send('profileAdd', { fromId: selectedId })}><Plus size={14} /> New</button>
+      <h2>{t("Displays")}</h2>
+      <button class="small" title={t("Duplicate the selected display")} onclick={() => link.send('profileAdd', { fromId: selectedId })}><Plus size={14} /> {t("New")}</button>
     </div>
     <div class="plist">
       {#each st.profiles as p (p.id)}
@@ -206,14 +207,14 @@
     </div>
 
     <details class="langs">
-      <summary>Languages <span class="muted">({st.languages.length})</span></summary>
+      <summary>{t("Languages")} <span class="muted">({st.languages.length})</span></summary>
       <div class="langlist">
         {#each st.languages as l (l.code)}<span class="pill"><b>{l.code.toUpperCase()}</b> {l.name}</span>{/each}
       </div>
       <div class="addlang">
-        <input style="width:56px" placeholder="en" bind:value={newCode} aria-label="Language code" />
-        <input class="grow" placeholder="English" bind:value={newName} aria-label="Language name" />
-        <button onclick={addLanguage}>Add</button>
+        <input style="width:56px" placeholder=en bind:value={newCode} aria-label={t("Language code")} />
+        <input class="grow" placeholder={t("English")} bind:value={newName} aria-label={t("Language name")} />
+        <button onclick={addLanguage}>{t("Add")}</button>
       </div>
     </details>
   </aside>
@@ -222,15 +223,15 @@
     <section class="main">
       <!-- Identity -->
       <header class="bar">
-        <input class="title" bind:value={draft.name} aria-label="Display name" />
+        <input class="title" bind:value={draft.name} aria-label={t("Display name")} />
         <span class="badge" class:conf={isConf}>{modeLabel(draft)}</span>
         <span class="grow"></span>
-        <button class="ghost" onclick={resetLayout}><RotateCcw size={14} /> Reset</button>
+        <button class="ghost" onclick={resetLayout}><RotateCcw size={14} /> {t("Reset")}</button>
         <button
           class="ghost danger"
           disabled={st.profiles.length < 2}
-          onclick={() => confirm(`Delete “${draft!.name}”?`) && link.send('profileDelete', { id: selectedId })}
-        ><Trash size={14} /> Delete</button>
+          onclick={() => confirm(t('Delete “{name}”?', { name: draft!.name })) && link.send('profileDelete', { id: selectedId })}
+        ><Trash size={14} /> {t("Delete")}</button>
       </header>
 
       <div class="work">
@@ -248,24 +249,24 @@
             />
             {#if !isConf}
               <div class="areaframe" style:left="{draft.area.x}%" style:top="{draft.area.y}%" style:width="{draft.area.w}%" style:height="{draft.area.h}%">
-                <div class="grip" title="Drag to move the text area" onpointerdown={(e) => beginDrag('move', e)}>Text area</div>
-                <div class="corner nw" title="Drag to resize" onpointerdown={(e) => beginDrag('nw', e)}></div>
-                <div class="corner se" title="Drag to resize" onpointerdown={(e) => beginDrag('se', e)}></div>
+                <div class="grip" title={t("Drag to move the text area")} onpointerdown={(e) => beginDrag('move', e)}>{t("Text area")}</div>
+                <div class="corner nw" title={t("Drag to resize")} onpointerdown={(e) => beginDrag('nw', e)}></div>
+                <div class="corner se" title={t("Drag to resize")} onpointerdown={(e) => beginDrag('se', e)}></div>
               </div>
             {/if}
           </div>
           <p class="hint">
-            {st.liveSong ? 'Showing the live song.' : 'Showing a sample song.'}
-            {#if !isConf}Drag the number, credits or lyrics to resize them. Drag the frame to move the text area.{/if}
-            Changes go live immediately.
+            {st.liveSong ? t('Showing the live song.') : t('Showing a sample song.')}
+            {#if !isConf}{t("Drag the number, credits or lyrics to resize them. Drag the frame to move the text area.")}{/if}
+            {t("Changes go live immediately.")}
           </p>
 
           <div class="links">
-            <div class="linkshead">Open on a screen or add to OBS as a Browser Source at {draft.width}×{draft.height}</div>
+            <div class="linkshead">{t("Open on a screen or add to OBS as a Browser Source at")} {draft.width}×{draft.height}</div>
             {#each displayUrls(draft.id) as u}
               <div class="link">
                 <code>{u}</code>
-                <button class="icon" title="Copy" aria-label="Copy {u}" onclick={() => copy(u)}>{#if copied === u}<Check size={14} />{:else}<Copy size={14} />{/if}</button>
+                <button class="icon" title={t("Copy")} aria-label="Copy {u}" onclick={() => copy(u)}>{#if copied === u}<Check size={14} />{:else}<Copy size={14} />{/if}</button>
               </div>
             {/each}
           </div>
@@ -274,8 +275,8 @@
         <!-- Settings -->
         <div class="settings">
           <div class="tabs" role="tablist">
-            {#each tabs as t}
-              <button role="tab" aria-selected={tab === t} class:sel={tab === t} onclick={() => (tab = t)}>{t}</button>
+            {#each tabs as tb}
+              <button role="tab" aria-selected={tab === tb} class:sel={tab === tb} onclick={() => (tab = tb)}>{t(tb)}</button>
             {/each}
           </div>
 
@@ -283,7 +284,7 @@
             {#if tab === 'Text'}
               {#if isConf}
                 <div class="group">
-                  <h3>Language</h3>
+                  <h3>{t("Language")}</h3>
                   <div class="seg wide">
                     {#each st.languages as l (l.code)}
                       <button class:sel={draft.languages[0] === l.code} onclick={() => (draft!.languages = [l.code])}>{l.name}</button>
@@ -292,48 +293,48 @@
                 </div>
               {/if}
               <div class="group">
-                <h3>Font</h3>
-                <div class="field"><span>Typeface</span>
+                <h3>{t("Font")}</h3>
+                <div class="field"><span>{t("Typeface")}</span>
                   <select bind:value={draft.text.font}>{#each fonts as f}<option value={f}>{f.split(',')[0].replace(/'/g, '')}</option>{/each}</select>
                 </div>
-                <label class="check"><input type="checkbox" bind:checked={draft.text.autoFit} /> Fit text to the screen</label>
+                <label class="check"><input type="checkbox" bind:checked={draft.text.autoFit} /> {t("Fit text to the screen")}</label>
                 {#if draft.text.autoFit}
-                  <label class="check"><input type="checkbox" bind:checked={draft.text.noWrap} /> Keep each line on one line <small>shrinks instead of wrapping</small></label>
-                  <div class="field"><span>Largest</span><input type="range" min="20" max="240" bind:value={draft.text.maxSize} /><output>{draft.text.maxSize}px</output></div>
-                  <div class="field"><span>Smallest</span><input type="range" min="8" max="80" bind:value={draft.text.minSize} /><output>{draft.text.minSize}px</output></div>
+                  <label class="check"><input type="checkbox" bind:checked={draft.text.noWrap} /> {t("Keep each line on one line")} <small>{t("shrinks instead of wrapping")}</small></label>
+                  <div class="field"><span>{t("Largest")}</span><input type="range" min="20" max="240" bind:value={draft.text.maxSize} /><output>{draft.text.maxSize}px</output></div>
+                  <div class="field"><span>{t("Smallest")}</span><input type="range" min="8" max="80" bind:value={draft.text.minSize} /><output>{draft.text.minSize}px</output></div>
                 {:else}
-                  <div class="field"><span>Size</span><input type="range" min="12" max="240" bind:value={draft.text.size} /><output>{draft.text.size}px</output></div>
+                  <div class="field"><span>{t("Size")}</span><input type="range" min="12" max="240" bind:value={draft.text.size} /><output>{draft.text.size}px</output></div>
                 {/if}
-                <div class="field"><span>Line height</span><input type="range" min="0.9" max="2" step="0.05" bind:value={draft.text.lineHeight} /><output>{draft.text.lineHeight}</output></div>
+                <div class="field"><span>{t("Line height")}</span><input type="range" min="0.9" max="2" step="0.05" bind:value={draft.text.lineHeight} /><output>{draft.text.lineHeight}</output></div>
               </div>
               <div class="group">
-                <h3>Show</h3>
-                <label class="check"><input type="checkbox" bind:checked={draft.showVerseLabel} /> Verse label <small>1., Ref., Bridge</small></label>
-                <label class="check"><input type="checkbox" bind:checked={draft.text.shadow} /> Text shadow</label>
-                <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> Notes &amp; marks <small>from Annotate: Solo, All…</small></label>
-                {#if isConf}<label class="check"><input type="checkbox" bind:checked={draft.blankWithScreens} /> Go black with Blank <small>off: dims and shows a badge</small></label>{/if}
+                <h3>{t("Show")}</h3>
+                <label class="check"><input type="checkbox" bind:checked={draft.showVerseLabel} /> {t("Verse label")} <small>{t("1., Ref., Bridge")}</small></label>
+                <label class="check"><input type="checkbox" bind:checked={draft.text.shadow} /> {t("Text shadow")}</label>
+                <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> {t("Notes &amp; marks")} <small>{t("from Annotate: Solo, All…")}</small></label>
+                {#if isConf}<label class="check"><input type="checkbox" bind:checked={draft.blankWithScreens} /> {t("Go black with Blank")} <small>{t("off: dims and shows a badge")}</small></label>{/if}
               </div>
             {:else if tab === 'Languages'}
               <div class="group">
-                <h3>Columns <small>in order, left to right</small></h3>
+                <h3>{t("Columns")} <small>{t("in order, left to right")}</small></h3>
                 {#each draft.languages as code, i (code)}
                   {@const s = draft.text.perLanguage[code] ?? defaultLangStyle()}
                   <div class="lang">
                     <div class="langtop">
                       <span class="colnum">{i + 1}</span>
                       <strong class="grow">{langName(code)}</strong>
-                      <button class="icon" aria-label="Move left" disabled={i === 0} onclick={() => moveLang(i, -1)}><ArrowUp size={14} /></button>
-                      <button class="icon" aria-label="Move right" disabled={i === draft.languages.length - 1} onclick={() => moveLang(i, 1)}><ArrowDown size={14} /></button>
+                      <button class="icon" aria-label={t("Move left")} disabled={i === 0} onclick={() => moveLang(i, -1)}><ArrowUp size={14} /></button>
+                      <button class="icon" aria-label={t("Move right")} disabled={i === draft.languages.length - 1} onclick={() => moveLang(i, 1)}><ArrowDown size={14} /></button>
                       <button class="icon" aria-label="Remove {langName(code)}" disabled={draft.languages.length < 2} onclick={() => toggleLang(code)}><X size={14} /></button>
                     </div>
                     {#if draft.text.perLanguage[code]}
                       <div class="langstyle">
-                        <input type="color" bind:value={draft.text.perLanguage[code].color} aria-label="Colour" />
-                        <select bind:value={draft.text.perLanguage[code].weight} aria-label="Weight">
-                          {#each [300, 400, 500, 600, 700, 800] as w}<option value={w}>{({ 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Heavy' } as Record<number, string>)[w]}</option>{/each}
+                        <input type="color" bind:value={draft.text.perLanguage[code].color} aria-label={t("Colour")} />
+                        <select bind:value={draft.text.perLanguage[code].weight} aria-label={t("Weight")}>
+                          {#each [300, 400, 500, 600, 700, 800] as w}<option value={w}>{t(({ 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'Semibold', 700: 'Bold', 800: 'Heavy' } as Record<number, string>)[w])}</option>{/each}
                         </select>
-                        <label class="check"><input type="checkbox" bind:checked={draft.text.perLanguage[code].italic} /> Italic</label>
-                        <input class="grow" type="range" min="0.5" max="1.5" step="0.05" bind:value={draft.text.perLanguage[code].scale} aria-label="Scale" />
+                        <label class="check"><input type="checkbox" bind:checked={draft.text.perLanguage[code].italic} /> {t("Italic")}</label>
+                        <input class="grow" type="range" min="0.5" max="1.5" step="0.05" bind:value={draft.text.perLanguage[code].scale} aria-label={t("Scale")} />
                         <output>{Math.round(s.scale * 100)}%</output>
                       </div>
                     {/if}
@@ -348,93 +349,93 @@
                 {/if}
               </div>
               <div class="group">
-                <h3>Second column</h3>
+                <h3>{t("Second column")}</h3>
                 <label class="check">
                   <input type="checkbox" checked={!!draft.text.secondaryColor} onchange={(e) => (draft!.text.secondaryColor = e.currentTarget.checked ? '#cfcfcf' : '')} />
-                  Same colour for every column after the first
-                  {#if draft.text.secondaryColor}<input type="color" bind:value={draft.text.secondaryColor} aria-label="Secondary colour" />{/if}
+                  {t("Same colour for every column after the first")}
+                  {#if draft.text.secondaryColor}<input type="color" bind:value={draft.text.secondaryColor} aria-label={t("Secondary colour")} />{/if}
                 </label>
-                <div class="field"><span>No translation</span>
+                <div class="field"><span>{t("No translation")}</span>
                   <select bind:value={draft.missingLanguage}>
-                    <option value="fallbackSingle">Show only the available language</option>
-                    <option value="empty">Keep an empty column</option>
+                    <option value="fallbackSingle">{t("Show only the available language")}</option>
+                    <option value="empty">{t("Keep an empty column")}</option>
                   </select>
                 </div>
               </div>
             {:else if tab === 'Layout'}
               <div class="group">
-                <h3>Arrangement</h3>
-                <div class="field"><span>Languages</span>
+                <h3>{t("Arrangement")}</h3>
+                <div class="field"><span>{t("Languages")}</span>
                   <div class="seg">
-                    <button class:sel={draft.layout.mode === 'columns'} onclick={() => (draft!.layout.mode = 'columns')}>Side by side</button>
-                    <button class:sel={draft.layout.mode === 'stacked'} onclick={() => (draft!.layout.mode = 'stacked')}>Stacked</button>
+                    <button class:sel={draft.layout.mode === 'columns'} onclick={() => (draft!.layout.mode = 'columns')}>{t("Side by side")}</button>
+                    <button class:sel={draft.layout.mode === 'stacked'} onclick={() => (draft!.layout.mode = 'stacked')}>{t("Stacked")}</button>
                   </div>
                 </div>
-                <div class="field"><span>Vertical</span>
+                <div class="field"><span>{t("Vertical")}</span>
                   <div class="seg">
-                    {#each ['top', 'center', 'bottom'] as const as a}<button class:sel={draft.layout.align === a} onclick={() => (draft!.layout.align = a)}>{a[0].toUpperCase() + a.slice(1)}</button>{/each}
+                    {#each ['top', 'center', 'bottom'] as const as a}<button class:sel={draft.layout.align === a} onclick={() => (draft!.layout.align = a)}>{t(a[0].toUpperCase() + a.slice(1))}</button>{/each}
                   </div>
                 </div>
-                <div class="field"><span>Text align</span>
+                <div class="field"><span>{t("Text align")}</span>
                   <div class="seg">
-                    <button class:sel={draft.layout.textAlign === 'left'} onclick={() => (draft!.layout.textAlign = 'left')}>Left</button>
-                    <button class:sel={draft.layout.textAlign === 'center'} onclick={() => (draft!.layout.textAlign = 'center')}>Center</button>
+                    <button class:sel={draft.layout.textAlign === 'left'} onclick={() => (draft!.layout.textAlign = 'left')}>{t("Left")}</button>
+                    <button class:sel={draft.layout.textAlign === 'center'} onclick={() => (draft!.layout.textAlign = 'center')}>{t("Center")}</button>
                   </div>
                 </div>
                 {#if draft.layout.mode === 'columns'}
-                  <div class="field"><span>First column</span><input type="range" min="0.25" max="0.75" step="0.01" bind:value={draft.layout.ratio} /><output>{Math.round(draft.layout.ratio * 100)}%</output></div>
+                  <div class="field"><span>{t("First column")}</span><input type="range" min="0.25" max="0.75" step="0.01" bind:value={draft.layout.ratio} /><output>{Math.round(draft.layout.ratio * 100)}%</output></div>
                 {/if}
               </div>
               <div class="group">
-                <h3>Spacing</h3>
-                <div class="field"><span>Padding</span><input type="range" min="0" max="300" bind:value={draft.layout.padding} /><output>{draft.layout.padding}px</output></div>
-                <div class="field"><span>Gap</span><input type="range" min="0" max="300" bind:value={draft.layout.gap} /><output>{draft.layout.gap}px</output></div>
+                <h3>{t("Spacing")}</h3>
+                <div class="field"><span>{t("Padding")}</span><input type="range" min="0" max="300" bind:value={draft.layout.padding} /><output>{draft.layout.padding}px</output></div>
+                <div class="field"><span>{t("Gap")}</span><input type="range" min="0" max="300" bind:value={draft.layout.gap} /><output>{draft.layout.gap}px</output></div>
                 <label class="check">
-                  <input type="checkbox" bind:checked={draft.layout.divider} /> Divider between languages
-                  {#if draft.layout.divider}<input type="color" value={draft.layout.dividerColor.slice(0, 7)} oninput={(e) => (draft!.layout.dividerColor = e.currentTarget.value + '55')} aria-label="Divider colour" />{/if}
+                  <input type="checkbox" bind:checked={draft.layout.divider} /> {t("Divider between languages")}
+                  {#if draft.layout.divider}<input type="color" value={draft.layout.dividerColor.slice(0, 7)} oninput={(e) => (draft!.layout.dividerColor = e.currentTarget.value + '55')} aria-label={t("Divider colour")} />{/if}
                 </label>
               </div>
               <div class="group">
-                <h3>Text area <small>part of the screen used for text</small></h3>
-                <div class="field"><span>Top</span><input type="range" min="0" max="90" bind:value={draft.area.y} /><output>{draft.area.y}%</output></div>
-                <div class="field"><span>Height</span><input type="range" min="10" max={100 - draft.area.y} bind:value={draft.area.h} /><output>{draft.area.h}%</output></div>
-                <div class="field"><span>Left</span><input type="range" min="0" max="90" bind:value={draft.area.x} /><output>{draft.area.x}%</output></div>
-                <div class="field"><span>Width</span><input type="range" min="10" max={100 - draft.area.x} bind:value={draft.area.w} /><output>{draft.area.w}%</output></div>
+                <h3>{t("Text area")} <small>{t("part of the screen used for text")}</small></h3>
+                <div class="field"><span>{t("Top")}</span><input type="range" min="0" max="90" bind:value={draft.area.y} /><output>{draft.area.y}%</output></div>
+                <div class="field"><span>{t("Height")}</span><input type="range" min="10" max={100 - draft.area.y} bind:value={draft.area.h} /><output>{draft.area.h}%</output></div>
+                <div class="field"><span>{t("Left")}</span><input type="range" min="0" max="90" bind:value={draft.area.x} /><output>{draft.area.x}%</output></div>
+                <div class="field"><span>{t("Width")}</span><input type="range" min="10" max={100 - draft.area.x} bind:value={draft.area.w} /><output>{draft.area.w}%</output></div>
                 <div class="addrow">
-                  <button class="small" onclick={() => (draft!.area = { x: 0, y: 0, w: 100, h: 100 })}>Full screen</button>
-                  <button class="small" onclick={() => (draft!.area = { x: 5, y: 4, w: 90, h: 60 })}>Upper 60%</button>
+                  <button class="small" onclick={() => (draft!.area = { x: 0, y: 0, w: 100, h: 100 })}>{t("Full screen")}</button>
+                  <button class="small" onclick={() => (draft!.area = { x: 5, y: 4, w: 90, h: 60 })}>{t("Upper 60%")}</button>
                 </div>
               </div>
             {:else if tab === 'Header'}
               <div class="group">
-                <label class="check strong"><input type="checkbox" bind:checked={draft.header.show} /> Show header</label>
+                <label class="check strong"><input type="checkbox" bind:checked={draft.header.show} /> {t("Show header")}</label>
               </div>
               {#if draft.header.show}
                 <div class="group">
-                  <h3>Contents</h3>
+                  <h3>{t("Contents")}</h3>
                   <div class="chips">
-                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCollection} /> Collection</label>
-                    <label class="check"><input type="checkbox" bind:checked={draft.header.showNumber} /> Number</label>
-                    <label class="check"><input type="checkbox" bind:checked={draft.header.showTitle} /> Title</label>
-                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCredits} /> Credits</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCollection} /> {t("Collection")}</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showNumber} /> {t("Number")}</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showTitle} /> {t("Title")}</label>
+                    <label class="check"><input type="checkbox" bind:checked={draft.header.showCredits} /> {t("Credits")}</label>
                   </div>
                 </div>
                 <div class="group">
-                  <h3>Style</h3>
-                  <div class="field"><span>Number</span><input type="range" min="40" max="300" bind:value={draft.header.numberSize} /><output>{draft.header.numberSize}px</output></div>
-                  <div class="field"><span>Credits</span><input type="range" min="14" max="80" bind:value={draft.header.creditsSize} /><output>{draft.header.creditsSize}px</output></div>
-                  <div class="field"><span>Colour</span><input type="color" bind:value={draft.header.color} aria-label="Header colour" /></div>
+                  <h3>{t("Style")}</h3>
+                  <div class="field"><span>{t("Number")}</span><input type="range" min="40" max="300" bind:value={draft.header.numberSize} /><output>{draft.header.numberSize}px</output></div>
+                  <div class="field"><span>{t("Credits")}</span><input type="range" min="14" max="80" bind:value={draft.header.creditsSize} /><output>{draft.header.creditsSize}px</output></div>
+                  <div class="field"><span>{t("Colour")}</span><input type="color" bind:value={draft.header.color} aria-label={t("Header colour")} /></div>
                   <label class="check">
-                    <input type="checkbox" bind:checked={draft.header.rule} /> Line under header
-                    {#if draft.header.rule}<input type="color" value={draft.header.ruleColor.slice(0, 7)} oninput={(e) => (draft!.header.ruleColor = e.currentTarget.value + '66')} aria-label="Line colour" />{/if}
+                    <input type="checkbox" bind:checked={draft.header.rule} /> {t("Line under header")}
+                    {#if draft.header.rule}<input type="color" value={draft.header.ruleColor.slice(0, 7)} oninput={(e) => (draft!.header.ruleColor = e.currentTarget.value + '66')} aria-label={t("Line colour")} />{/if}
                   </label>
                 </div>
               {/if}
             {:else if tab === 'Screen'}
               <div class="group">
-                <h3>Resolution</h3>
+                <h3>{t("Resolution")}</h3>
                 <div class="res">
-                  <input type="number" bind:value={draft.width} aria-label="Width" /><span>×</span><input type="number" bind:value={draft.height} aria-label="Height" />
+                  <input type="number" bind:value={draft.width} aria-label={t("Width")} /><span>×</span><input type="number" bind:value={draft.height} aria-label={t("Height")} />
                 </div>
                 <div class="addrow">
                   {#each [[1920, 1080], [1280, 720], [3840, 2160], [1024, 768]] as [w, h]}
@@ -444,19 +445,19 @@
               </div>
               {#if !isConf}
                 <div class="group">
-                  <h3>Background</h3>
+                  <h3>{t("Background")}</h3>
                   <div class="seg wide">
-                    <button class:sel={draft.background.type === 'transparent'} onclick={() => (draft!.background.type = 'transparent')}>Transparent <small>OBS overlay</small></button>
-                    <button class:sel={draft.background.type === 'color'} onclick={() => (draft!.background.type = 'color')}>Solid colour</button>
+                    <button class:sel={draft.background.type === 'transparent'} onclick={() => (draft!.background.type = 'transparent')}>{t("Transparent")} <small>{t("OBS overlay")}</small></button>
+                    <button class:sel={draft.background.type === 'color'} onclick={() => (draft!.background.type = 'color')}>{t("Solid colour")}</button>
                   </div>
-                  {#if draft.background.type === 'color'}<div class="field"><span>Colour</span><input type="color" bind:value={draft.background.color} aria-label="Background colour" /></div>{/if}
+                  {#if draft.background.type === 'color'}<div class="field"><span>{t("Colour")}</span><input type="color" bind:value={draft.background.color} aria-label={t("Background colour")} /></div>{/if}
                 </div>
                 <div class="group">
-                  <h3>Transition</h3>
-                  <div class="field"><span>Fade</span><input type="range" min="0" max="1500" step="50" bind:value={draft.transitionMs} /><output>{draft.transitionMs}ms</output></div>
+                  <h3>{t("Transition")}</h3>
+                  <div class="field"><span>{t("Fade")}</span><input type="range" min="0" max="1500" step="50" bind:value={draft.transitionMs} /><output>{draft.transitionMs}ms</output></div>
                 </div>
               {/if}
-              <p class="hint">In OBS, turn off “Shutdown source when not visible” so the display stays connected.</p>
+              <p class="hint">{t("In OBS, turn off “Shutdown source when not visible” so the display stays connected.")}</p>
             {/if}
           </div>
         </div>

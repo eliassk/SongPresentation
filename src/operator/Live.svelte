@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../shared/i18n.svelte';
   import { untrack } from 'svelte';
   import { app, link, getSong, saveSong, songName, displayUrls } from './store.svelte';
   import Stage from '../display/Stage.svelte';
@@ -141,7 +142,7 @@
   }
   let savedCurrent = $derived(st.savedSetlists.find((x) => x.name === st.setlistName) ?? null);
   function deleteSetlist() {
-    if (savedCurrent && confirm(`Delete saved setlist “${savedCurrent.name}”?`)) link.send('setlistDelete', { id: savedCurrent.id });
+    if (savedCurrent && confirm(t('Delete saved setlist “{name}”?', { name: savedCurrent.name }))) link.send('setlistDelete', { id: savedCurrent.id });
   }
 
   let dirty = $derived(!!st.setlist.length && (!savedCurrent || savedCurrent.ids.join() !== st.setlist.join()));
@@ -266,7 +267,7 @@
   });
   function loadSetlist(e: Event) {
     const id = (e.currentTarget as HTMLSelectElement).value;
-    if (id && (!dirty || confirm('The current setlist has unsaved changes. Open another one anyway?'))) link.send('setlistLoad', { id });
+    if (id && (!dirty || confirm(t('The current setlist has unsaved changes. Open another one anyway?')))) link.send('setlistLoad', { id });
     (e.currentTarget as HTMLSelectElement).value = '';
   }
 
@@ -310,20 +311,20 @@
   <!-- Library -->
   <section class="col">
     <div class="card pad stack">
-      <select bind:value={collection} aria-label="Collection">
+      <select bind:value={collection} aria-label={t("Collection")}>
         {#each collections as c (c.key)}<option value={c.key}>{c.name} · {c.key}</option>{/each}
       </select>
       <form class="numrow" onsubmit={jumpNumber}>
-        <input id="number" class="grow num" inputmode="numeric" placeholder="Song number" bind:value={numberBox} aria-label="Song number" />
-        <button type="submit" class="primary">Go live</button>
+        <input id="number" class="grow num" inputmode="numeric" placeholder={t("Song number")} bind:value={numberBox} aria-label={t("Song number")} />
+        <button type="submit" class="primary">{t("Go live")}</button>
       </form>
       <div class="search">
         <Search size={15} />
-        <input id="search" placeholder="Search all collections" bind:value={q} aria-label="Search songs" />
+        <input id="search" placeholder={t("Search all collections")} bind:value={q} aria-label={t("Search songs")} />
         <kbd>/</kbd>
       </div>
-      <label class="follow" title="Clicking a song puts it on the screens immediately">
-        <input type="checkbox" bind:checked={follow} /> Screens follow selection
+      <label class="follow" title={t("Clicking a song puts it on the screens immediately")}>
+        <input type="checkbox" bind:checked={follow} /> {t("Screens follow selection")}
       </label>
     </div>
 
@@ -335,66 +336,66 @@
             <span class="t">{s.title[primary] ?? Object.values(s.title)[0]}</span>
             {#if q}<span class="k">{s.collectionKey}</span>{/if}
           </button>
-          <button class="icon ghost" title={medley ? 'Add to medley' : 'Add to setlist'} aria-label={medley ? 'Add to medley' : 'Add to setlist'} onclick={() => (medley ? addSongToMedley(s.id) : addToSetlist(s.id))}>{#if medley}<Layers size={15} />{:else}<Plus size={15} />{/if}</button>
+          <button class="icon ghost" title={medley ? t('Add to medley') : t('Add to setlist')} aria-label={medley ? t('Add to medley') : t('Add to setlist')} onclick={() => (medley ? addSongToMedley(s.id) : addToSetlist(s.id))}>{#if medley}<Layers size={15} />{:else}<Plus size={15} />{/if}</button>
         </div>
       {:else}
-        <p class="empty">No songs match “{q}”.</p>
+        <p class="empty">{t("No songs match “")}{q}”.</p>
       {/each}
     </div>
 
     <div class="card pad">
       <div class="row head">
-        <h2 class="grow">Setlist{#if dirty} <span class="unsaved" title="Not saved">●</span>{/if}</h2>
-        <span class="hint">N / P · {st.setlist.length} items</span>
+        <h2 class="grow">{t("Setlist")}{#if dirty} <span class="unsaved" title={t("Not saved")}>●</span>{/if}</h2>
+        <span class="hint">N / P · {st.setlist.length} {t("items")}</span>
       </div>
       <form class="setbar" onsubmit={(e) => { e.preventDefault(); link.send('setlistSave', { name: setlistName }); }}>
-        <input class="grow" placeholder="Service name, e.g. Sunday 22.11" bind:value={setlistName} aria-label="Setlist name" />
-        <button type="submit" class:primary={dirty} title="Save setlist">Save</button>
+        <input class="grow" placeholder={t("Service name, e.g. Sunday 22.11")} bind:value={setlistName} aria-label={t("Setlist name")} />
+        <button type="submit" class:primary={dirty} title={t("Save setlist")}>{t("Save")}</button>
       </form>
-      <select class="openpick" onchange={loadSetlist} aria-label="Open saved setlist">
-        <option value="">Open saved setlist… ({st.savedSetlists.length})</option>
-        {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} items</option>{/each}
+      <select class="openpick" onchange={loadSetlist} aria-label={t("Open saved setlist")}>
+        <option value="">{t("Open saved setlist… (")}{st.savedSetlists.length})</option>
+        {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} {t("items")}</option>{/each}
       </select>
       <div class="tools">
-        <button title="Start an empty setlist" onclick={() => (!dirty || confirm('Discard unsaved changes?')) && link.send('setlistNew')}><FilePlus size={14} /> New</button>
-        <button class:on={!!medley} title="Build a medley from several songs" onclick={() => (medley ? (medley = null) : startMedley())}><Layers size={14} /> Medley</button>
+        <button title={t("Start an empty setlist")} onclick={() => (!dirty || confirm(t('Discard unsaved changes?'))) && link.send('setlistNew')}><FilePlus size={14} /> {t("New")}</button>
+        <button class:on={!!medley} title={t("Build a medley from several songs")} onclick={() => (medley ? (medley = null) : startMedley())}><Layers size={14} /> {t("Medley")}</button>
         <span class="grow"></span>
-        <a class="icon toollink" href="/print/setlist" target="_blank" title="Print for musicians" aria-label="Print setlist"><Printer size={14} /></a>
-        {#if savedCurrent}<button class="icon ghost" title="Delete saved setlist" aria-label="Delete saved setlist" onclick={deleteSetlist}><Trash size={14} /></button>{/if}
+        <a class="icon toollink" href="/print/setlist" target="_blank" title={t("Print for musicians")} aria-label={t("Print setlist")}><Printer size={14} /></a>
+        {#if savedCurrent}<button class="icon ghost" title={t("Delete saved setlist")} aria-label={t("Delete saved setlist")} onclick={deleteSetlist}><Trash size={14} /></button>{/if}
       </div>
 
       {#if medley}
         <div class="medley">
-          <input placeholder="Medley name" bind:value={medley.name} aria-label="Medley name" />
+          <input placeholder={t("Medley name")} bind:value={medley.name} aria-label={t("Medley name")} />
           {#each medley.parts as p, i}
             <div class="part">
               <div class="row">
                 <span class="pi num">{i + 1}</span>
                 <span class="grow ellipsis">{songLabel(p.songId)}</span>
-                <button class="icon ghost" aria-label="Move up" onclick={() => movePart(i, -1)}><ArrowUp size={13} /></button>
-                <button class="icon ghost" aria-label="Move down" onclick={() => movePart(i, 1)}><ArrowDown size={13} /></button>
-                <button class="icon ghost" aria-label="Remove song" onclick={() => medley!.parts.splice(i, 1)}><X size={13} /></button>
+                <button class="icon ghost" aria-label={t("Move up")} onclick={() => movePart(i, -1)}><ArrowUp size={13} /></button>
+                <button class="icon ghost" aria-label={t("Move down")} onclick={() => movePart(i, 1)}><ArrowDown size={13} /></button>
+                <button class="icon ghost" aria-label={t("Remove song")} onclick={() => medley!.parts.splice(i, 1)}><X size={13} /></button>
               </div>
               <div class="chips">
                 {#each p.all as k, vi}
-                  <button class="chip" class:off={!p.on[vi]} aria-pressed={p.on[vi]} title={p.on[vi] ? 'Click to skip' : 'Click to include'} onclick={() => (p.on[vi] = !p.on[vi])}>{verseLabel(k)}</button>
+                  <button class="chip" class:off={!p.on[vi]} aria-pressed={p.on[vi]} title={p.on[vi] ? t('Click to skip') : t('Click to include')} onclick={() => (p.on[vi] = !p.on[vi])}>{verseLabel(k)}</button>
                 {/each}
               </div>
             </div>
           {/each}
           <div class="msearch">
             <Search size={14} />
-            <input placeholder={medley.parts.length ? 'Add next song: number or title' : 'Add first song: number or title'} bind:value={mq} aria-label="Find a song to add"
+            <input placeholder={medley.parts.length ? t('Add next song: number or title') : t('Add first song: number or title')} bind:value={mq} aria-label={t("Find a song to add")}
               onkeydown={(e) => { if (e.key === 'Enter' && medleyHits[0]) { e.preventDefault(); addSongToMedley(medleyHits[0].id); } }} />
           </div>
           {#each medleyHits as h (h.id)}
             <button class="hit" onclick={() => addSongToMedley(h.id)}><Plus size={13} /> {songLabel(h.id)}</button>
           {/each}
-          <p class="pv">{medley.parts.length ? 'Click a verse to skip it. ' : ''}You can also use <Layers size={11} /> in the song list.</p>
+          <p class="pv">{medley.parts.length ? t('Click a verse to skip it. ') : ''}{t("You can also use")} <Layers size={11} /> {t("in the song list.")}</p>
           <div class="row">
-            <button class="ghost" onclick={() => (medley = null)}>Cancel</button>
+            <button class="ghost" onclick={() => (medley = null)}>{t("Cancel")}</button>
             <span class="grow"></span>
-            <button class="primary" disabled={!medley.parts.length} onclick={saveMedley}>{medley.id ? 'Save medley' : 'Save and add'}</button>
+            <button class="primary" disabled={!medley.parts.length} onclick={saveMedley}>{medley.id ? t('Save medley') : t('Save and add')}</button>
           </div>
         </div>
       {/if}
@@ -403,17 +404,17 @@
       {#each st.setlist as id, i (id)}
         {@const s = summary(id)}
         <div class="item" class:sel={selected?.id === id} class:islive={st.live.songId === id}>
-          <button class="name" onclick={() => select(id)} ondblclick={() => link.send('setLive', { songId: id })} title="Click to open, double-click to show">
+          <button class="name" onclick={() => select(id)} ondblclick={() => link.send('setLive', { songId: id })} title={t("Click to open, double-click to show")}>
             <span class="pos num">{i + 1}</span>
             {#if s?.medley}<span class="k"><Layers size={11} /></span>{:else}<span class="k">{s?.collectionKey}</span><span class="n num">{s?.number ?? ''}</span>{/if}
             <span class="t">{s ? (s.title[primary] ?? Object.values(s.title)[0]) : id}</span>
           </button>
-          <button class="icon ghost" aria-label="Move up" onclick={() => moveInSetlist(i, -1)}><ArrowUp size={14} /></button>
-          <button class="icon ghost" aria-label="Move down" onclick={() => moveInSetlist(i, 1)}><ArrowDown size={14} /></button>
-          <button class="icon ghost" aria-label="Remove" onclick={() => link.send('setlist', { ids: st.setlist.filter((x) => x !== id) })}><X size={14} /></button>
+          <button class="icon ghost" aria-label={t("Move up")} onclick={() => moveInSetlist(i, -1)}><ArrowUp size={14} /></button>
+          <button class="icon ghost" aria-label={t("Move down")} onclick={() => moveInSetlist(i, 1)}><ArrowDown size={14} /></button>
+          <button class="icon ghost" aria-label={t("Remove")} onclick={() => link.send('setlist', { ids: st.setlist.filter((x) => x !== id) })}><X size={14} /></button>
         </div>
       {:else}
-        <p class="empty small">Add songs with <Plus size={12} /> to plan the service.</p>
+        <p class="empty small">{t("Add songs with")} <Plus size={12} /> {t("to plan the service.")}</p>
       {/each}
       </div>
     </div>
@@ -424,9 +425,9 @@
     {#if selected}
       <div class="card songcard">
         <div class="cardhead">
-          <button class="icon ghost" title="Previous song in collection ( [ )" aria-label="Previous song" onclick={() => link.send('songStep', { delta: -1 })}><ChevronLeft size={18} /></button>
+          <button class="icon ghost" title={t("Previous song in collection ( [ )")} aria-label={t("Previous song")} onclick={() => link.send('songStep', { delta: -1 })}><ChevronLeft size={18} /></button>
           <span class="collection grow">{selected.collection}</span>
-          <button class="icon ghost" title="Next song in collection ( ] )" aria-label="Next song" onclick={() => link.send('songStep', { delta: 1 })}><ChevronRight size={18} /></button>
+          <button class="icon ghost" title={t("Next song in collection ( ] )")} aria-label={t("Next song")} onclick={() => link.send('songStep', { delta: 1 })}><ChevronRight size={18} /></button>
         </div>
         <div class="info">
           <div class="bignum num">{selected.number ?? ''}</div>
@@ -439,23 +440,23 @@
               <div class="facts">{#each selected.parts as p, i}{#if p}<span class="chip">{i + 1}. {p.collectionKey} {p.number ?? ''} {p.title[primary] ?? Object.values(p.title)[0]}</span>{/if}{/each}</div>
             {:else}
             <div class="facts">
-              {#if selected.author}<span>Written{selected.year ? ` in ${selected.year}` : ''} by <span class="chip">{selected.author}</span></span>{/if}
-              <span>{selected.composer || 'Unknown composer'}</span>
+              {#if selected.author}<span>{selected.year ? t('Written in {year} by', { year: selected.year }) : t('Written by')} <span class="chip">{selected.author}</span></span>{/if}
+              <span>{selected.composer || t('Unknown composer')}</span>
               {#if selected.copyright}<span>Text © {selected.copyright}</span>{/if}
               <span class="num">{[selected.key, verseCount(selected) ? `${verseCount(selected)} verses` : ''].filter(Boolean).join(' · ')}</span>
             </div>
             {/if}
           </div>
           {#if medley && !selected.medley}
-            <button class="golive accentbtn" onclick={addPart}><Layers size={16} /> Add to medley</button>
+            <button class="golive accentbtn" onclick={addPart}><Layers size={16} /> {t("Add to medley")}</button>
           {:else if selected.medley}
-            <button class="golive" onclick={() => editMedley(selected!)}><Layers size={16} /> Edit medley</button>
+            <button class="golive" onclick={() => editMedley(selected!)}><Layers size={16} /> {t("Edit medley")}</button>
           {/if}
-          <button class="golive" disabled={st.setlist.includes(selected.id)} title="Add to setlist" onclick={() => addToSetlist(selected!.id)}>
-            <ListPlus size={16} /> {st.setlist.includes(selected.id) ? 'In setlist' : 'Setlist'}
+          <button class="golive" disabled={st.setlist.includes(selected.id)} title={t("Add to setlist")} onclick={() => addToSetlist(selected!.id)}>
+            <ListPlus size={16} /> {st.setlist.includes(selected.id) ? t('In setlist') : t('Setlist')}
           </button>
           <button class="primary golive" onclick={() => goLive(0)}>
-            {#if selectedIsLive}<RotateCcw size={16} /> Restart{:else}<Play size={16} /> Show{/if}
+            {#if selectedIsLive}<RotateCcw size={16} /> {t("Restart")}{:else}<Play size={16} /> {t("Show")}{/if}
             <kbd class="onaccent">↵</kbd>
           </button>
         </div>
@@ -463,27 +464,27 @@
 
       <div class="card">
         <div class="cardhead">
-          <h2 class="nomargin">Verses</h2>
+          <h2 class="nomargin">{t("Verses")}</h2>
           <button class="toggleall ghost" onclick={toggleAll}>
             <span class="check" class:off={disabled.size > 0}><Check size={12} strokeWidth={3} /></span>
-            {disabled.size > 0 ? 'Enable all' : 'All enabled'}
+            {disabled.size > 0 ? t('Enable all') : t('All enabled')}
           </button>
-          <label class="sungpick" title="Language the singers sing. Stage and singers' screens follow it. Each verse can override it.">
+          <label class="sungpick" title={t("Language the singers sing. Stage and singers' screens follow it. Each verse can override it.")}>
             <Languages size={14} />
-            <select value={sung['*'] ?? ''} onchange={(e) => setSung('*', e.currentTarget.value)} aria-label="Sung language for the whole song">
-              <option value="">Display languages</option>
-              {#each langOptions as o (o.code)}<option value={o.code}>Sung in {o.name}</option>{/each}
+            <select value={sung['*'] ?? ''} onchange={(e) => setSung('*', e.currentTarget.value)} aria-label={t("Sung language for the whole song")}>
+              <option value="">{t("Display languages")}</option>
+              {#each langOptions as o (o.code)}<option value={o.code}>{t("Sung in")} {o.name}</option>{/each}
             </select>
           </label>
           <span class="grow"></span>
-          <span class="hint">{annotate ? 'Click a line to mark it · notes are saved per song' : 'Click to skip a verse'}</span>
-          <button class="toggleall" class:on={annotate} aria-pressed={annotate} onclick={() => (annotate = !annotate)}><PenLine size={14} /> Annotate</button>
+          <span class="hint">{annotate ? t('Click a line to mark it · notes are saved per song') : t('Click to skip a verse')}</span>
+          <button class="toggleall" class:on={annotate} aria-pressed={annotate} onclick={() => (annotate = !annotate)}><PenLine size={14} /> {t("Annotate")}</button>
         </div>
         {#if annotate}
           <label class="presets">
-            <span>Marks</span>
-            <input class="grow" value={MARKS.join(', ')} onchange={setPresets} placeholder="Solo, All, Men, Women" aria-label="Marks a click cycles through, comma separated" />
-            <span class="hint">click a line to cycle · click its tag to type any text</span>
+            <span>{t("Marks")}</span>
+            <input class="grow" value={MARKS.join(', ')} onchange={setPresets} placeholder={t("Solo, All, Men, Women")} aria-label={t("Marks a click cycles through, comma separated")} />
+            <span class="hint">{t("click a line to cycle · click its tag to type any text")}</span>
           </label>
         {/if}
         <datalist id="mark-presets">{#each MARKS as m}<option value={m}></option>{/each}</datalist>
@@ -497,7 +498,7 @@
                 <div class="vbody">
                   <div class="vhead">
                     <strong class="num">{verseLabel(k)}</strong>
-                    <input class="noteinput grow" placeholder="Note, e.g. key change, slower…" value={note?.text ?? ''} onchange={(e) => setNote(k, e)} aria-label="Note for {verseLabel(k)}" />
+                    <input class="noteinput grow" placeholder={t("Note, e.g. key change, slower…")} value={note?.text ?? ''} onchange={(e) => setNote(k, e)} aria-label="Note for {verseLabel(k)}" />
                   </div>
                   <div class="vcols" style:grid-template-columns="repeat({langs.length}, 1fr)">
                     {#each langs as l, li}
@@ -506,13 +507,13 @@
                           {#if li === 0 && editing?.key === k && editing.line === n}
                             <div class="markline">
                               <!-- svelte-ignore a11y_autofocus -->
-                              <input class="markinput" list="mark-presets" autofocus placeholder="Type any text" value={note?.marks?.[n] ?? ''} aria-label="Mark for this line" onfocus={(e) => e.currentTarget.select()}
+                              <input class="markinput" list="mark-presets" autofocus placeholder={t("Type any text")} value={note?.marks?.[n] ?? ''} aria-label={t("Mark for this line")} onfocus={(e) => e.currentTarget.select()}
                                 onkeydown={(e) => { if (e.key === 'Enter') saveCustom(e); if (e.key === 'Escape') editing = null; }}
                                 onblur={saveCustom} />{line}
                             </div>
                           {:else if li === 0}
                             <div class="markline">
-                              <button class="mark" class:empty={!note?.marks?.[n]} title="Click to type your own text" aria-label="Edit mark" onclick={(e) => customMark(k, n, e)}>{note?.marks?.[n] ?? '+'}</button><button class="linetext" onclick={() => cycleMark(k, n)} oncontextmenu={(e) => customMark(k, n, e)} title="Click to cycle: {MARKS.join(', ')}, none">{line}</button>
+                              <button class="mark" class:empty={!note?.marks?.[n]} title={t("Click to type your own text")} aria-label={t("Edit mark")} onclick={(e) => customMark(k, n, e)}>{note?.marks?.[n] ?? '+'}</button><button class="linetext" onclick={() => cycleMark(k, n)} oncontextmenu={(e) => customMark(k, n, e)} title="Click to cycle: {MARKS.join(', ')}, none">{line}</button>
                             </div>
                           {:else}<div>{line}</div>{/if}
                         {/each}
@@ -521,38 +522,38 @@
                   </div>
                 </div>
               {:else}
-              <button class="vbody" onclick={() => toggle(i)} aria-pressed={!off} title={off ? 'Enable verse' : 'Skip verse'}>
+              <button class="vbody" onclick={() => toggle(i)} aria-pressed={!off} title={off ? t('Enable verse') : t('Skip verse')}>
                 <div class="vhead">
                   <span class="check" class:off><Check size={12} strokeWidth={3} /></span>
                   <strong class="num">{verseLabel(k)}</strong>
-                  {#if isLive}<span class="livetag">On screen</span>{/if}
+                  {#if isLive}<span class="livetag">{t("On screen")}</span>{/if}
                   {#if note?.text}<span class="notetag">{note.text}</span>{/if}
                   {#if selected.parts && selected.parts[Number(k.split(':')[0])]}{@const p = selected.parts[Number(k.split(':')[0])]!}<span class="parttag">{p.collectionKey} {p.number ?? ''}</span>{/if}
                 </div>
                 <div class="vcols" style:grid-template-columns="repeat({verseLangs(k).length}, 1fr)">
                   {#each verseLangs(k) as l, li}
                     <div class:second={li > 0}>
-                      {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}</div>{:else}<div class="muted">No {l.toUpperCase()} text</div>{/each}
+                      {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}</div>{:else}<div class="muted">{t("No")} {l.toUpperCase()} {t("text")}</div>{/each}
                     </div>
                   {/each}
                 </div>
               </button>
               {/if}
               {#if !annotate}
-                <select class="vlang" class:set={!!sung[k]} value={sung[k] ?? ''} onchange={(e) => setSung(k, e.currentTarget.value)} title="Sung language for this verse" aria-label="Sung language for {verseLabel(k)}">
-                  <option value="">{sung['*'] ? sung['*'].toUpperCase() : 'Lang'}</option>
+                <select class="vlang" class:set={!!sung[k]} value={sung[k] ?? ''} onchange={(e) => setSung(k, e.currentTarget.value)} title={t("Sung language for this verse")} aria-label="Sung language for {verseLabel(k)}">
+                  <option value="">{sung['*'] ? sung['*'].toUpperCase() : t('Lang')}</option>
                   {#each langOptions as o (o.code)}<option value={o.code}>{o.code.toUpperCase()} · {o.name}</option>{/each}
                 </select>
               {/if}
-              <button class="show" title="Show this verse" aria-label="Show this verse" onclick={() => goLive(i)}><Play size={18} /></button>
+              <button class="show" title={t("Show this verse")} aria-label={t("Show this verse")} onclick={() => goLive(i)}><Play size={18} /></button>
             </div>
           {/each}
         </div>
       </div>
     {:else}
       <div class="card welcome">
-        <h1>Ready for the service</h1>
-        <p class="muted">Type a song number and press Enter, or pick one from the list. Arrow keys move between verses, B blanks the screens.</p>
+        <h1>{t("Ready for the service")}</h1>
+        <p class="muted">{t("Type a song number and press Enter, or pick one from the list. Arrow keys move between verses, B blanks the screens.")}</p>
       </div>
     {/if}
   </section>
@@ -561,11 +562,11 @@
   <section class="col">
     <div class="card onair" class:active={!!st.liveSong && !st.live.blank}>
       <div class="cardhead">
-        <span class="badge" class:active={!!st.liveSong && !st.live.blank}><span class="dot"></span>{st.live.blank ? 'Blanked' : st.liveSong ? 'Live' : 'Standby'}</span>
-        <select class="grow previewpick" bind:value={previewId} aria-label="Display to preview">
+        <span class="badge" class:active={!!st.liveSong && !st.live.blank}><span class="dot"></span>{st.live.blank ? t('Blanked') : st.liveSong ? t('Live') : t('Standby')}</span>
+        <select class="grow previewpick" bind:value={previewId} aria-label={t("Display to preview")}>
           {#each st.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
         </select>
-        <button class="ghost small" onclick={() => link.send('clear')}>Clear</button>
+        <button class="ghost small" onclick={() => link.send('clear')}>{t("Clear")}</button>
       </div>
       <div class="previewwrap">
         <div class="preview" style:aspect-ratio="{preview.width} / {preview.height}">
@@ -578,39 +579,39 @@
           <span class="grow ellipsis">{st.liveSong.title[primary] ?? Object.values(st.liveSong.title)[0]}</span>
           <span class="vpos num">{verseLabel(liveKeys[st.live.slideIndex] ?? '')}</span>
         {:else}
-          <span class="muted">Nothing on screen</span>
+          <span class="muted">{t("Nothing on screen")}</span>
         {/if}
       </div>
       <div class="transport">
-        <button class="big" aria-label="Previous verse" onclick={() => link.send('step', { delta: -1 })}><SkipBack size={18} /> Prev</button>
-        <button class="big blank" class:on={st.live.blank} onclick={() => link.send('blank', {})}><EyeOff size={18} /> Blank <kbd>B</kbd></button>
-        <button class="big next" aria-label="Next verse" onclick={() => link.send('step', { delta: 1 })}>Next <SkipForward size={18} /></button>
+        <button class="big" aria-label={t("Previous verse")} onclick={() => link.send('step', { delta: -1 })}><SkipBack size={18} /> {t("Prev")}</button>
+        <button class="big blank" class:on={st.live.blank} onclick={() => link.send('blank', {})}><EyeOff size={18} /> {t("Blank")} <kbd>B</kbd></button>
+        <button class="big next" aria-label={t("Next verse")} onclick={() => link.send('step', { delta: 1 })}>{t("Next")} <SkipForward size={18} /></button>
       </div>
     </div>
 
     <div class="card pad">
-      <h2>Up next</h2>
+      <h2>{t("Up next")}</h2>
       {#if nextIndex !== -1 && st.liveSong}
         <div class="next">
           <span class="vtag num">{verseLabel(liveKeys[nextIndex])}</span>
           <div>{#each st.liveSong.lyrics[primary]?.[liveKeys[nextIndex]] ?? [] as line}<div>{line}</div>{/each}</div>
         </div>
       {:else}
-        <p class="muted small nomargin">{st.liveSong ? 'Last verse of this song.' : 'Nothing queued.'}</p>
+        <p class="muted small nomargin">{st.liveSong ? t('Last verse of this song.') : t('Nothing queued.')}</p>
       {/if}
     </div>
 
     <div class="card pad stack">
-      <h2 class="nomargin">Displays</h2>
+      <h2 class="nomargin">{t("Displays")}</h2>
       {#each st.profiles as p (p.id)}
         <div class="display">
           <div class="row">
             <strong class="grow">{p.name}</strong>
             <span class="muted small num">{p.width}×{p.height}</span>
             <div class="seg">
-              <button class="icon" title="Smaller text" aria-label="Smaller text" onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}><Minus size={14} /></button>
-              <span class="seglabel num" title="Text size on this display">{st.fitted?.[p.id] ?? (p.text.autoFit ? p.text.maxSize : p.text.size)}</span>
-              <button class="icon" title="Larger text" aria-label="Larger text" onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}><Plus size={14} /></button>
+              <button class="icon" title={t("Smaller text")} aria-label={t("Smaller text")} onclick={() => link.send('fontStep', { id: p.id, delta: -4 })}><Minus size={14} /></button>
+              <span class="seglabel num" title={t("Text size on this display")}>{st.fitted?.[p.id] ?? (p.text.autoFit ? p.text.maxSize : p.text.size)}</span>
+              <button class="icon" title={t("Larger text")} aria-label={t("Larger text")} onclick={() => link.send('fontStep', { id: p.id, delta: 4 })}><Plus size={14} /></button>
             </div>
           </div>
           <div class="langpills" role="group" aria-label="Languages on {p.name}">
@@ -624,9 +625,9 @@
           <a class="url" href={displayUrls(p.id)[0]} target="_blank">{displayUrls(p.id)[0]}</a>
         </div>
       {/each}
-      <p class="hint nomargin">Click a language to show only it. Shift-click to add a second column.</p>
+      <p class="hint nomargin">{t("Click a language to show only it. Shift-click to add a second column.")}</p>
       <div class="display">
-        <div class="row"><strong class="grow">Phone remote</strong></div>
+        <div class="row"><strong class="grow">{t("Phone remote")}</strong></div>
         <a class="url" href={displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]} target="_blank">{displayUrls('').map((u) => u.replace('/display/', '/remote'))[0]}</a>
       </div>
     </div>
