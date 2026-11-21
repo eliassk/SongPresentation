@@ -186,10 +186,18 @@
 </div>
 
 <style>
+  /* Registered so --fs can animate; size changes MUST ease in during a live service. */
+  @property --fs {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 48px;
+  }
   .root {
+    --soft: 450ms ease;
     position: absolute;
     inset: 0;
     overflow: hidden;
+    transition: background-color var(--soft);
   }
   .slide {
     position: absolute;
@@ -205,6 +213,7 @@
     justify-content: space-between;
     gap: 1em;
     flex: none;
+    transition: color var(--soft), border-color var(--soft);
   }
   .id {
     display: flex;
@@ -243,6 +252,7 @@
     position: absolute;
     inset: 0;
     display: grid;
+    transition: --fs var(--soft), gap var(--soft), padding var(--soft), grid-template-columns var(--soft), grid-template-rows var(--soft);
     animation-name: fadein;
     animation-timing-function: ease-out;
   }
@@ -254,6 +264,11 @@
   }
   .body.hidden {
     animation: none;
+    transition: none;
+  }
+  /* Measured copies MUST reflect the final values at once. */
+  .body.hidden .inner {
+    transition: none;
   }
   @keyframes fadein {
     from { opacity: 0; }
@@ -286,6 +301,7 @@
   /* Words MUST NOT break mid-word: an overflowing word shrinks the text instead. */
   .inner {
     overflow-wrap: normal;
+    transition: color var(--soft), line-height var(--soft);
   }
   .line {
     text-wrap: pretty;

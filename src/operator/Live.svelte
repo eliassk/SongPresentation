@@ -117,6 +117,17 @@
   let liveDisabled = $derived(new Set(st.liveSong ? (st.disabled[st.liveSong.id] ?? []) : []));
   let nextIndex = $derived(liveKeys.findIndex((_, i) => i > st.live.slideIndex && !liveDisabled.has(i)));
 
+  // Keeps the live verse and the one after it visible while stepping through the song.
+  let versesEl = $state<HTMLDivElement>();
+  $effect(() => {
+    const idx = st.live.slideIndex;
+    const nxt = nextIndex;
+    if (!selectedIsLive || !versesEl) return;
+    const items = versesEl.children;
+    const target = (items[nxt] ?? items[idx]) as HTMLElement | undefined;
+    target?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+
   function goLive(index = 0) {
     if (selected) link.send('setLive', { songId: selected.id, slideIndex: index });
   }
@@ -514,7 +525,7 @@
           </label>
         {/if}
         <datalist id="mark-presets">{#each MARKS as m}<option value={m}></option>{/each}</datalist>
-        <div class="verses">
+        <div class="verses" bind:this={versesEl}>
           {#each selKeys as k, i}
             {@const off = disabled.has(i)}
             {@const isLive = selectedIsLive && st.live.slideIndex === i}
