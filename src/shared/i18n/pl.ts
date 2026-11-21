@@ -1,5 +1,11 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const pl: Record<string, string> = {
+  'Live edit': 'Edycja na żywo',
+  'Discard': 'Odrzuć',
+  'Apply to screens': 'Zastosuj na ekranach',
+  'Send every change to the screens at once': 'Wysyłaj każdą zmianę od razu na ekrany',
+  'This display has changes that are not applied. Discard them?': 'Ten ekran ma niezastosowane zmiany. Odrzucić je?',
+  'Preview only. The screens still show the applied settings.': 'Tylko podgląd. Ekrany nadal pokazują zastosowane ustawienia.',
   '(bridge).': '(bridge).',
   '(chorus),': '(refren),',
   '1., Ref., Bridge': '1., Ref., Bridge',

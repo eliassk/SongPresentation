@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import { fade } from 'svelte/transition';
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel, defaultLangStyle, credits, metaFor, sungLanguages } from '../shared/slides';
 
@@ -138,6 +139,7 @@
   {#if !blank && song && key}
     <div
       class="slide"
+      transition:fade={{ duration: Math.max(profile.transitionMs, 400) }}
       class:shadow={profile.text.shadow}
       style:left="{profile.area?.x ?? 0}%"
       style:top="{profile.area?.y ?? 0}%"

@@ -1,5 +1,11 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const no: Record<string, string> = {
+  'Live edit': 'Direkte redigering',
+  'Discard': 'Forkast',
+  'Apply to screens': 'Bruk på skjermene',
+  'Send every change to the screens at once': 'Send hver endring til skjermene med en gang',
+  'This display has changes that are not applied. Discard them?': 'Denne skjermen har endringer som ikke er tatt i bruk. Forkaste dem?',
+  'Preview only. The screens still show the applied settings.': 'Kun forhåndsvisning. Skjermene viser fortsatt de brukte innstillingene.',
   '(bridge).': '(bro).',
   '(chorus),': '(refreng),',
   '1., Ref., Bridge': '1., Ref., Bridge',

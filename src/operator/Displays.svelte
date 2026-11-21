@@ -108,12 +108,34 @@
     else if (t.closest('.body')) beginDrag('text', e);
   }
 
-  // Push every edit live to all displays.
+  // Edits stay in the preview until applied. Live editing pushes each change at once.
+  let liveEdit = $state(localStorage.getItem('liveEdit') === '1');
   $effect(() => {
-    if (!draft) return;
-    const snap = $state.snapshot(draft);
+    try { localStorage.setItem('liveEdit', liveEdit ? '1' : '0'); } catch {}
+  });
+  const normalized = (p: Profile) => {
+    const snap = structuredClone($state.snapshot(p)) as Profile;
     for (const l of snap.languages) snap.text.perLanguage[l] ??= defaultLangStyle();
-    link.send('profileUpdate', { profile: snap });
+    return snap;
+  };
+  let saved = $derived(st.profiles.find((x) => x.id === draft?.id));
+  let dirty = $derived(!!draft && !!saved && JSON.stringify(normalized(draft)) !== JSON.stringify(normalized(saved)));
+
+  function apply() {
+    if (draft) link.send('profileUpdate', { profile: normalized(draft) });
+  }
+  function discard() {
+    if (saved) draft = structuredClone($state.snapshot(saved));
+  }
+  function pick(id: string) {
+    if (id === selectedId) return;
+    if (dirty && !confirm(t('This display has changes that are not applied. Discard them?'))) return;
+    selectedId = id;
+  }
+
+  $effect(() => {
+    if (!draft || !liveEdit) return;
+    link.send('profileUpdate', { profile: normalized(draft) });
   });
 
   const sample: Song = {
@@ -195,7 +217,7 @@
     </div>
     <div class="plist">
       {#each st.profiles as p (p.id)}
-        <button class="pcard" class:sel={p.id === selectedId} onclick={() => (selectedId = p.id)}>
+        <button class="pcard" class:sel={p.id === selectedId} onclick={() => pick(p.id)}>
           <span class="pname">{p.name}</span>
           <span class="pmeta">
             <span class="badge" class:conf={p.mode === 'confidence'}>{modeLabel(p)}</span>
@@ -226,6 +248,11 @@
         <input class="title" bind:value={draft.name} aria-label={t("Display name")} />
         <span class="badge" class:conf={isConf}>{modeLabel(draft)}</span>
         <span class="grow"></span>
+        <label class="liveedit" title={t("Send every change to the screens at once")}><input type="checkbox" bind:checked={liveEdit} /> {t("Live edit")}</label>
+        {#if !liveEdit}
+          <button class="ghost" disabled={!dirty} onclick={discard}>{t("Discard")}</button>
+          <button class="primary" disabled={!dirty} onclick={apply}><Check size={14} /> {t("Apply to screens")}</button>
+        {/if}
         <button class="ghost" onclick={resetLayout}><RotateCcw size={14} /> {t("Reset")}</button>
         <button
           class="ghost danger"
@@ -255,6 +282,7 @@
               </div>
             {/if}
           </div>
+          {#if dirty && !liveEdit}<p class="pending">{t("Preview only. The screens still show the applied settings.")}</p>{/if}
           <p class="hint">
             {st.liveSong ? t('Showing the live song.') : t('Showing a sample song.')}
             {#if !isConf}{t("Drag the number, credits or lyrics to resize them. Drag the frame to move the text area.")}{/if}
@@ -492,6 +520,8 @@
 
   /* Main */
   .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .pending { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+  .liveedit { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted, inherit); cursor: pointer; }
   .bar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
   .bar .title { font-size: 18px; font-weight: 700; border-color: transparent; background: transparent; padding: 4px 8px; margin-left: -8px; min-width: 0; width: 22ch; }
   .bar .title:hover, .bar .title:focus { border-color: var(--line); background: var(--panel); }
