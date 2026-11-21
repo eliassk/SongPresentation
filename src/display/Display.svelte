@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import type { Profile, Song, VerseNote } from '../shared/types';
-  import { slideKeys, verseLabel, defaultLangStyle, credits } from '../shared/slides';
+  import { slideKeys, verseLabel, defaultLangStyle, credits, metaFor, sungLanguages } from '../shared/slides';
 
   let { profile, song, slideIndex = 0, blank = false, notes, onfit }: {
     profile: Profile;
@@ -18,8 +18,9 @@
 
   const langsFor = (k: string | null) => {
     if (!song || !k) return [];
-    if (profile.missingLanguage === 'empty') return profile.languages;
-    return profile.languages.filter((l) => song.lyrics[l]?.[k]?.length);
+    const ls = sungLanguages(song, k, profile.languages);
+    if (profile.missingLanguage === 'empty') return ls;
+    return ls.filter((l) => song.lyrics[l]?.[k]?.length);
   };
   let langs = $derived(langsFor(key));
 
@@ -31,10 +32,12 @@
       : `grid-template-rows:${tracks};grid-template-columns:1fr`;
   };
 
+  // Inside a medley the header follows the song the current verse comes from.
+  let meta = $derived(song ? metaFor(song, key) : null);
   let title = $derived(
-    song ? [...new Set(profile.languages.map((l) => song.title?.[l]).filter(Boolean))].join('  ·  ') : '',
+    meta ? [...new Set(profile.languages.map((l) => meta.title?.[l]).filter(Boolean))].join('  ·  ') : '',
   );
-  let creditLines = $derived(song ? credits(song, profile.languages[0] ?? 'en') : ['', '']);
+  let creditLines = $derived(meta ? credits(meta, profile.languages[0] ?? 'en') : ['', '']);
 
   // One size per song: every slide is fitted off-screen, the smallest wins.
   // Per-slide fitting made the text jump between verses.
@@ -102,7 +105,7 @@
       >
         <div
           class="inner"
-          class:labelled={profile.showVerseLabel && song!.number != null}
+          class:labelled={profile.showVerseLabel && metaFor(song!, k).number != null}
           style:text-align={profile.layout.textAlign}
           style:color={i > 0 && profile.text.secondaryColor ? profile.text.secondaryColor : s.color}
           style:font-style={s.italic ? 'italic' : 'normal'}
@@ -110,7 +113,7 @@
           style:font-size="calc(var(--fs) * {s.scale})"
           style:line-height={profile.text.lineHeight}
         >
-          {#if profile.showVerseLabel && song!.number != null}<div class="label">{verseLabel(k)}</div>{/if}
+          {#if profile.showVerseLabel && metaFor(song!, k).number != null}<div class="label">{verseLabel(k)}</div>{/if}
           <div class="lines">
             {#if i === 0 && notes?.[k]?.text}<div class="note">{notes[k].text}</div>{/if}
             {#each song!.lyrics[l]?.[k] ?? [] as line, n}
@@ -141,21 +144,21 @@
       style:width="{profile.area?.w ?? 100}%"
       style:height="{profile.area?.h ?? 100}%"
     >
-      {#if h.show}
+      {#if h.show && meta}
         <header
           style:color={h.color}
           style:padding="{profile.layout.padding * 0.35}px {profile.layout.padding}px {profile.layout.padding * 0.25}px"
           style:border-bottom={h.rule ? `2px solid ${h.ruleColor}` : 'none'}
         >
           <div class="id">
-            {#if h.showCollection && song.collectionKey}
-              <span class="ckey" style:font-size="{Math.max(h.numberSize * 0.24, h.creditsSize * 0.8)}px">{song.collectionKey}</span>
+            {#if h.showCollection && meta.collectionKey}
+              <span class="ckey" style:font-size="{Math.max(h.numberSize * 0.24, h.creditsSize * 0.8)}px">{meta.collectionKey}</span>
             {/if}
-            {#if h.showNumber && song.number != null}
-              <span class="num" style:font-size="{h.numberSize}px">{song.number}</span>
+            {#if h.showNumber && meta.number != null}
+              <span class="num" style:font-size="{h.numberSize}px">{meta.number}</span>
             {/if}
-            {#if h.showTitle || song.number == null}
-              <span class="title" style:font-size="{song.number == null ? h.numberSize * 0.55 : h.creditsSize * 1.3}px">{title}</span>
+            {#if h.showTitle || meta.number == null}
+              <span class="title" style:font-size="{meta.number == null ? h.numberSize * 0.55 : h.creditsSize * 1.3}px">{title}</span>
             {/if}
           </div>
           {#if h.showCredits}

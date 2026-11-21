@@ -15,7 +15,20 @@ export interface Song {
   /** Verse keys in play order. "c" is the chorus and MAY repeat. */
   order: string[];
   lyrics: Record<LangCode, Record<string, string[]>>;
+  /** Set on a medley: the parts in play order. Empty keys means the whole song. */
+  medley?: MedleyPart[];
+  /** Resolved by the server for a medley. Index matches the "<part>:" prefix of each slide key. */
+  parts?: (SongMeta | undefined)[];
+  /** Sung language per verse key. "*" applies to the whole song. Set on the live song only. */
+  sung?: Record<string, LangCode>;
 }
+
+export interface MedleyPart {
+  songId: string;
+  keys: string[];
+}
+
+export type SongMeta = Pick<Song, 'title' | 'number' | 'collection' | 'collectionKey' | 'author' | 'year' | 'composer' | 'copyright' | 'key'> & { songId: string };
 
 export interface SongSummary {
   id: string;
@@ -23,6 +36,7 @@ export interface SongSummary {
   collection: string;
   collectionKey: string;
   title: Record<LangCode, string>;
+  medley: boolean;
   search: string;
 }
 
@@ -102,6 +116,8 @@ export interface AppState {
   disabled: Record<string, number[]>;
   /** Operator annotations per song id, then verse key. Kept off the song so re-imports keep them. */
   notes: Record<string, Record<string, VerseNote>>;
+  /** Sung-language overrides per song id, then verse key or "*". */
+  sung: Record<string, Record<string, LangCode>>;
   /** Text size each display fitted to, in px. */
   fitted?: Record<string, number>;
   /** Marks a line click cycles through. */

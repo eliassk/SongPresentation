@@ -91,6 +91,7 @@ const state = () => ({
   savedSetlists: [],
   disabled: {},
   notes: {},
+  sung: {},
   markPresets: ['Solo', 'All', 'Men', 'Women', 'Instr.'],
   profiles: profiles(),
   languages: languages(),

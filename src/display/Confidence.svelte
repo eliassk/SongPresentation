@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte';
   import type { Profile, Song, VerseNote } from '../shared/types';
-  import { slideKeys, verseLabel } from '../shared/slides';
+  import { slideKeys, verseLabel, metaFor, sungLanguages } from '../shared/slides';
 
   let { profile, song, slideIndex = 0, blank = false, disabled = [], notes, onfit, transparent = false }: {
     profile: Profile;
@@ -25,8 +25,12 @@
   // Falls back to any language that has the verse, so singers never see an empty screen.
   const lines = (k: string | null) => {
     if (!song || !k) return [];
-    return song.lyrics[lang]?.[k] ?? Object.values(song.lyrics).find((l) => l[k]?.length)?.[k] ?? [];
+    const l = sungLanguages(song, k, [lang])[0];
+    return song.lyrics[l]?.[k] ?? Object.values(song.lyrics).find((l) => l[k]?.length)?.[k] ?? [];
   };
+
+  let meta = $derived(song ? metaFor(song, key) : null);
+  let nextMeta = $derived(song && nextKey ? metaFor(song, nextKey) : null);
 
   // Follows the profile's text settings. With auto-fit, singers MUST see the whole verse.
   let current = $state<HTMLElement>();
@@ -90,9 +94,10 @@
 
 <div class="conf" style:font-family={profile.text.font} style:background={transparent ? 'transparent' : null}>
   <header>
-    {#if song}
-      <span class="num">{song.collectionKey} {song.number ?? ''}</span>
-      <span class="title">{song.title[lang] ?? Object.values(song.title)[0] ?? ''}</span>
+    {#if song && meta}
+      <span class="num">{meta.collectionKey ?? ''} {meta.number ?? ''}</span>
+      <span class="title">{meta.title?.[lang] ?? Object.values(meta.title ?? {})[0] ?? ''}</span>
+      {#if song.parts}<span class="medley">{song.title[lang] ?? Object.values(song.title)[0]}</span>{/if}
       {#if key}<span class="pos">{verseLabel(key)} · {position}/{enabledCount}</span>{/if}
     {:else}
       <span class="title idle">Waiting for the next song</span>
@@ -122,7 +127,7 @@
 
   <section class="next" style:line-height={profile.text.lineHeight}>
     {#if nextKey}
-      <div class="nlabel">Next · {verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
+      <div class="nlabel">Next · {#if nextMeta && nextMeta !== meta}<span class="nsong">{nextMeta.collectionKey ?? ''} {nextMeta.number ?? ''} {nextMeta.title?.[lang] ?? Object.values(nextMeta.title ?? {})[0] ?? ''}</span> · {/if}{verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
       {#each lines(nextKey) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[nextKey]?.marks?.[n]}<span class="mark">{notes[nextKey].marks[n]}</span>{/if}</div>{/each}
     {:else if song}
       <div class="nlabel">End of song</div>
@@ -174,6 +179,8 @@
   .note { text-align: right; font-size: 0.45em; font-style: italic; color: #cfcfcf; font-weight: 600; margin-bottom: 6px; }
   .nnote { font-style: italic; color: #9a9a9a; }
   .mark { display: inline-block; font-size: 0.42em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
+  .medley { flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7em; color: #8b877f; border: 1px solid #3a3a3a; border-radius: 999px; padding: 2px 12px; }
+  .nsong { color: #cfcfcf; }
   .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
   .blanked {
     position: absolute;

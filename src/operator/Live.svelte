@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { app, link, getSong, songName, displayUrls } from './store.svelte';
+  import { app, link, getSong, saveSong, songName, displayUrls } from './store.svelte';
   import Stage from '../display/Stage.svelte';
-  import { slideKeys, verseLabel, verseCount } from '../shared/slides';
-  import type { Song } from '../shared/types';
+  import { slideKeys, verseLabel, verseCount, sungLanguages } from '../shared/slides';
+  import type { Song, MedleyPart } from '../shared/types';
   import Check from '@lucide/svelte/icons/check';
   import Play from '@lucide/svelte/icons/play';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
@@ -21,6 +21,10 @@
   import Trash from '@lucide/svelte/icons/trash-2';
   import ListPlus from '@lucide/svelte/icons/list-plus';
   import PenLine from '@lucide/svelte/icons/pen-line';
+  import Layers from '@lucide/svelte/icons/layers';
+  import Printer from '@lucide/svelte/icons/printer';
+  import FilePlus from '@lucide/svelte/icons/file-plus';
+  import Languages from '@lucide/svelte/icons/languages';
 
   let st = $derived(app.state!);
   // Which display the on-air card previews. Per operator, so it lives in localStorage.
@@ -140,6 +144,83 @@
     if (savedCurrent && confirm(`Delete saved setlist “${savedCurrent.name}”?`)) link.send('setlistDelete', { id: savedCurrent.id });
   }
 
+  let dirty = $derived(!!st.setlist.length && (!savedCurrent || savedCurrent.ids.join() !== st.setlist.join()));
+
+  // Medley builder. Each part keeps all slide keys of its song and which of them play.
+  type BuildPart = { songId: string; all: string[]; on: boolean[] };
+  let medley = $state<{ id?: string; name: string; parts: BuildPart[] } | null>(null);
+  let mq = $state('');
+  let medleyHits = $derived.by(() => {
+    const t = mq.trim().toLowerCase();
+    if (!t) return [];
+    const m = t.match(/^([a-zæøåąćęłńóśźż]*)\s*(\d+)$/i);
+    const pool = app.songs.filter((x) => !x.medley);
+    const hits = m
+      ? pool.filter((x) => String(x.number) === m[2] && (!m[1] || x.collectionKey.toLowerCase() === m[1]))
+      : pool.filter((x) => x.search.includes(t));
+    return hits.slice(0, 6);
+  });
+  function startMedley() {
+    medley = { name: '', parts: [] };
+    mq = '';
+  }
+  async function toPart(id: string, keys: string[] = []): Promise<BuildPart> {
+    const all = slideKeys(await getSong(id));
+    // Stored keys are a subsequence of the slide keys. Empty means every verse.
+    let j = 0;
+    const on = all.map((k) => (keys.length ? (keys[j] === k ? (j++, true) : false) : true));
+    return { songId: id, all, on };
+  }
+  async function editMedley(song: Song) {
+    const parts = await Promise.all((song.medley ?? []).map((p) => toPart(p.songId, p.keys)));
+    medley = { id: song.id, name: song.title[primary] ?? Object.values(song.title)[0] ?? '', parts };
+    mq = '';
+  }
+  async function addSongToMedley(id: string, on?: boolean[]) {
+    if (!medley) return;
+    const part = await toPart(id);
+    if (on) part.on = on;
+    medley.parts.push(part);
+    mq = '';
+    if (!medley.name) {
+      const sm = summary(id);
+      medley.name = 'Medley: ' + (sm ? (sm.title[primary] ?? Object.values(sm.title)[0]) : '');
+    }
+  }
+  function addPart() {
+    if (selected && !selected.medley) addSongToMedley(selected.id, selKeys.map((_, i) => !disabled.has(i)));
+  }
+  function movePart(i: number, d: number) {
+    if (!medley) return;
+    const j = i + d;
+    if (j < 0 || j >= medley.parts.length) return;
+    [medley.parts[i], medley.parts[j]] = [medley.parts[j], medley.parts[i]];
+  }
+  async function saveMedley() {
+    if (!medley?.parts.length) return;
+    const name = medley.name.trim() || 'Medley';
+    const parts = medley.parts.map((p) => ({ songId: p.songId, keys: p.on.every(Boolean) ? [] : p.all.filter((_, i) => p.on[i]) }));
+    const saved = await saveSong({ id: medley.id ?? '', title: { [primary]: name }, collection: 'Medley', collectionKey: 'MED', number: null, medley: parts } as Song);
+    if (!st.setlist.includes(saved.id)) link.send('setlist', { ids: [...st.setlist, saved.id] });
+    medley = null;
+    selected = await getSong(saved.id);
+  }
+  const songLabel = (id: string) => {
+    const x = summary(id);
+    return x ? `${x.collectionKey} ${x.number ?? ''} · ${x.title[primary] ?? Object.values(x.title)[0]}` : id;
+  };
+
+  // Sung language. "*" is the whole song; a verse key overrides it.
+  let sung = $derived(selected ? (st.sung?.[selected.id] ?? {}) : {});
+  let langOptions = $derived.by(() => {
+    const codes = new Set([...st.languages.map((l) => l.code), ...Object.keys(selected?.lyrics ?? {})]);
+    return [...codes].filter((c) => !selected || selected.lyrics[c]).map((c) => ({ code: c, name: st.languages.find((l) => l.code === c)?.name ?? c }));
+  });
+  function setSung(key: string, lang: string) {
+    if (selected) link.send('sungSet', { songId: selected.id, key, lang });
+  }
+  const verseLangs = (k: string) => (selected ? sungLanguages({ ...selected, sung }, k, langs) : langs);
+
   // Annotations
   let MARKS = $derived(st.markPresets ?? []);
   let annotate = $state(false);
@@ -185,7 +266,7 @@
   });
   function loadSetlist(e: Event) {
     const id = (e.currentTarget as HTMLSelectElement).value;
-    if (id) link.send('setlistLoad', { id });
+    if (id && (!dirty || confirm('The current setlist has unsaved changes. Open another one anyway?'))) link.send('setlistLoad', { id });
     (e.currentTarget as HTMLSelectElement).value = '';
   }
 
@@ -254,7 +335,7 @@
             <span class="t">{s.title[primary] ?? Object.values(s.title)[0]}</span>
             {#if q}<span class="k">{s.collectionKey}</span>{/if}
           </button>
-          <button class="icon ghost" title="Add to setlist" aria-label="Add to setlist" onclick={() => addToSetlist(s.id)}><Plus size={15} /></button>
+          <button class="icon ghost" title={medley ? 'Add to medley' : 'Add to setlist'} aria-label={medley ? 'Add to medley' : 'Add to setlist'} onclick={() => (medley ? addSongToMedley(s.id) : addToSetlist(s.id))}>{#if medley}<Layers size={15} />{:else}<Plus size={15} />{/if}</button>
         </div>
       {:else}
         <p class="empty">No songs match “{q}”.</p>
@@ -262,25 +343,69 @@
     </div>
 
     <div class="card pad">
-      <div class="row head"><h2 class="grow">Setlist</h2><span class="hint">N / P</span></div>
-      <div class="setbar">
+      <div class="row head">
+        <h2 class="grow">Setlist{#if dirty} <span class="unsaved" title="Not saved">●</span>{/if}</h2>
+        <span class="hint">N / P · {st.setlist.length} items</span>
+      </div>
+      <form class="setbar" onsubmit={(e) => { e.preventDefault(); link.send('setlistSave', { name: setlistName }); }}>
         <input class="grow" placeholder="Service name, e.g. Sunday 22.11" bind:value={setlistName} aria-label="Setlist name" />
-        <button title="Save setlist" onclick={() => link.send('setlistSave', { name: setlistName })}>Save</button>
+        <button type="submit" class:primary={dirty} title="Save setlist">Save</button>
+      </form>
+      <select class="openpick" onchange={loadSetlist} aria-label="Open saved setlist">
+        <option value="">Open saved setlist… ({st.savedSetlists.length})</option>
+        {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} items</option>{/each}
+      </select>
+      <div class="tools">
+        <button title="Start an empty setlist" onclick={() => (!dirty || confirm('Discard unsaved changes?')) && link.send('setlistNew')}><FilePlus size={14} /> New</button>
+        <button class:on={!!medley} title="Build a medley from several songs" onclick={() => (medley ? (medley = null) : startMedley())}><Layers size={14} /> Medley</button>
+        <span class="grow"></span>
+        <a class="icon toollink" href="/print/setlist" target="_blank" title="Print for musicians" aria-label="Print setlist"><Printer size={14} /></a>
+        {#if savedCurrent}<button class="icon ghost" title="Delete saved setlist" aria-label="Delete saved setlist" onclick={deleteSetlist}><Trash size={14} /></button>{/if}
       </div>
-      <div class="setbar">
-        <select class="grow" onchange={loadSetlist} aria-label="Load saved setlist">
-          <option value="">Load saved… ({st.savedSetlists.length})</option>
-          {#each st.savedSetlists as x (x.id)}<option value={x.id}>{x.name} · {x.ids.length} items</option>{/each}
-        </select>
-        <button title="Start an empty setlist" onclick={() => link.send('setlistNew')}>New</button>
-        {#if savedCurrent}<button class="icon" title="Delete saved setlist" aria-label="Delete saved setlist" onclick={deleteSetlist}><Trash size={14} /></button>{/if}
-        <a class="printlink" href="/print/setlist" target="_blank" title="Print for musicians">Print</a>
-      </div>
+
+      {#if medley}
+        <div class="medley">
+          <input placeholder="Medley name" bind:value={medley.name} aria-label="Medley name" />
+          {#each medley.parts as p, i}
+            <div class="part">
+              <div class="row">
+                <span class="pi num">{i + 1}</span>
+                <span class="grow ellipsis">{songLabel(p.songId)}</span>
+                <button class="icon ghost" aria-label="Move up" onclick={() => movePart(i, -1)}><ArrowUp size={13} /></button>
+                <button class="icon ghost" aria-label="Move down" onclick={() => movePart(i, 1)}><ArrowDown size={13} /></button>
+                <button class="icon ghost" aria-label="Remove song" onclick={() => medley!.parts.splice(i, 1)}><X size={13} /></button>
+              </div>
+              <div class="chips">
+                {#each p.all as k, vi}
+                  <button class="chip" class:off={!p.on[vi]} aria-pressed={p.on[vi]} title={p.on[vi] ? 'Click to skip' : 'Click to include'} onclick={() => (p.on[vi] = !p.on[vi])}>{verseLabel(k)}</button>
+                {/each}
+              </div>
+            </div>
+          {/each}
+          <div class="msearch">
+            <Search size={14} />
+            <input placeholder={medley.parts.length ? 'Add next song: number or title' : 'Add first song: number or title'} bind:value={mq} aria-label="Find a song to add"
+              onkeydown={(e) => { if (e.key === 'Enter' && medleyHits[0]) { e.preventDefault(); addSongToMedley(medleyHits[0].id); } }} />
+          </div>
+          {#each medleyHits as h (h.id)}
+            <button class="hit" onclick={() => addSongToMedley(h.id)}><Plus size={13} /> {songLabel(h.id)}</button>
+          {/each}
+          <p class="pv">{medley.parts.length ? 'Click a verse to skip it. ' : ''}You can also use <Layers size={11} /> in the song list.</p>
+          <div class="row">
+            <button class="ghost" onclick={() => (medley = null)}>Cancel</button>
+            <span class="grow"></span>
+            <button class="primary" disabled={!medley.parts.length} onclick={saveMedley}>{medley.id ? 'Save medley' : 'Save and add'}</button>
+          </div>
+        </div>
+      {/if}
+
+      <div class="setitems">
       {#each st.setlist as id, i (id)}
         {@const s = summary(id)}
         <div class="item" class:sel={selected?.id === id} class:islive={st.live.songId === id}>
-          <button class="name" onclick={() => select(id)}>
-            <span class="k">{s?.collectionKey}</span><span class="n num">{s?.number ?? ''}</span>
+          <button class="name" onclick={() => select(id)} ondblclick={() => link.send('setLive', { songId: id })} title="Click to open, double-click to show">
+            <span class="pos num">{i + 1}</span>
+            {#if s?.medley}<span class="k"><Layers size={11} /></span>{:else}<span class="k">{s?.collectionKey}</span><span class="n num">{s?.number ?? ''}</span>{/if}
             <span class="t">{s ? (s.title[primary] ?? Object.values(s.title)[0]) : id}</span>
           </button>
           <button class="icon ghost" aria-label="Move up" onclick={() => moveInSetlist(i, -1)}><ArrowUp size={14} /></button>
@@ -290,6 +415,7 @@
       {:else}
         <p class="empty small">Add songs with <Plus size={12} /> to plan the service.</p>
       {/each}
+      </div>
     </div>
   </section>
 
@@ -309,13 +435,22 @@
             {#each langs.slice(1) as l}
               {#if selected.title[l]}<div class="subtitle">{selected.title[l]}</div>{/if}
             {/each}
+            {#if selected.parts}
+              <div class="facts">{#each selected.parts as p, i}{#if p}<span class="chip">{i + 1}. {p.collectionKey} {p.number ?? ''} {p.title[primary] ?? Object.values(p.title)[0]}</span>{/if}{/each}</div>
+            {:else}
             <div class="facts">
               {#if selected.author}<span>Written{selected.year ? ` in ${selected.year}` : ''} by <span class="chip">{selected.author}</span></span>{/if}
               <span>{selected.composer || 'Unknown composer'}</span>
               {#if selected.copyright}<span>Text © {selected.copyright}</span>{/if}
               <span class="num">{[selected.key, verseCount(selected) ? `${verseCount(selected)} verses` : ''].filter(Boolean).join(' · ')}</span>
             </div>
+            {/if}
           </div>
+          {#if medley && !selected.medley}
+            <button class="golive accentbtn" onclick={addPart}><Layers size={16} /> Add to medley</button>
+          {:else if selected.medley}
+            <button class="golive" onclick={() => editMedley(selected!)}><Layers size={16} /> Edit medley</button>
+          {/if}
           <button class="golive" disabled={st.setlist.includes(selected.id)} title="Add to setlist" onclick={() => addToSetlist(selected!.id)}>
             <ListPlus size={16} /> {st.setlist.includes(selected.id) ? 'In setlist' : 'Setlist'}
           </button>
@@ -333,6 +468,13 @@
             <span class="check" class:off={disabled.size > 0}><Check size={12} strokeWidth={3} /></span>
             {disabled.size > 0 ? 'Enable all' : 'All enabled'}
           </button>
+          <label class="sungpick" title="Language the singers sing. Stage and singers' screens follow it. Each verse can override it.">
+            <Languages size={14} />
+            <select value={sung['*'] ?? ''} onchange={(e) => setSung('*', e.currentTarget.value)} aria-label="Sung language for the whole song">
+              <option value="">Display languages</option>
+              {#each langOptions as o (o.code)}<option value={o.code}>Sung in {o.name}</option>{/each}
+            </select>
+          </label>
           <span class="grow"></span>
           <span class="hint">{annotate ? 'Click a line to mark it · notes are saved per song' : 'Click to skip a verse'}</span>
           <button class="toggleall" class:on={annotate} aria-pressed={annotate} onclick={() => (annotate = !annotate)}><PenLine size={14} /> Annotate</button>
@@ -385,15 +527,22 @@
                   <strong class="num">{verseLabel(k)}</strong>
                   {#if isLive}<span class="livetag">On screen</span>{/if}
                   {#if note?.text}<span class="notetag">{note.text}</span>{/if}
+                  {#if selected.parts && selected.parts[Number(k.split(':')[0])]}{@const p = selected.parts[Number(k.split(':')[0])]!}<span class="parttag">{p.collectionKey} {p.number ?? ''}</span>{/if}
                 </div>
-                <div class="vcols" style:grid-template-columns="repeat({langs.length}, 1fr)">
-                  {#each langs as l, li}
+                <div class="vcols" style:grid-template-columns="repeat({verseLangs(k).length}, 1fr)">
+                  {#each verseLangs(k) as l, li}
                     <div class:second={li > 0}>
                       {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}</div>{:else}<div class="muted">No {l.toUpperCase()} text</div>{/each}
                     </div>
                   {/each}
                 </div>
               </button>
+              {/if}
+              {#if !annotate}
+                <select class="vlang" class:set={!!sung[k]} value={sung[k] ?? ''} onchange={(e) => setSung(k, e.currentTarget.value)} title="Sung language for this verse" aria-label="Sung language for {verseLabel(k)}">
+                  <option value="">{sung['*'] ? sung['*'].toUpperCase() : 'Lang'}</option>
+                  {#each langOptions as o (o.code)}<option value={o.code}>{o.code.toUpperCase()} · {o.name}</option>{/each}
+                </select>
               {/if}
               <button class="show" title="Show this verse" aria-label="Show this verse" onclick={() => goLive(i)}><Play size={18} /></button>
             </div>
@@ -531,6 +680,35 @@
   .search input { width: 100%; padding-left: 32px; padding-right: 34px; }
   .search kbd { position: absolute; right: 8px; }
   .setbar { display: flex; gap: 6px; margin-bottom: 6px; }
+  .openpick { width: 100%; font-size: 13px; padding: 5px 8px; margin-bottom: 6px; }
+  .tools { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .tools button { font-size: 13px; padding: 5px 8px; gap: 5px; }
+  .tools button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+  .toollink { color: var(--text-2); display: inline-flex; padding: 6px; border-radius: 8px; }
+  .toollink:hover { background: var(--panel-2); }
+  .unsaved { color: var(--accent-ink); font-size: 10px; vertical-align: middle; }
+  .setitems { border-top: 1px solid var(--line); padding-top: 6px; }
+  .item .pos { color: var(--muted); font-size: 11px; min-width: 1.2em; }
+  .medley { display: flex; flex-direction: column; gap: 6px; background: var(--panel-2); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
+  .medley input { font-size: 13px; padding: 5px 8px; }
+  .part { display: flex; flex-direction: column; gap: 4px; font-size: 13px; background: var(--panel); border-radius: 8px; padding: 6px 8px; }
+  .part .row { gap: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 1.6em; }
+  .chips .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .chips .chip.off { background: transparent; border-style: dashed; border-color: var(--line-strong); color: var(--muted); text-decoration: line-through; font-weight: 400; }
+  .msearch { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; color: var(--muted); }
+  .msearch input { border: none; background: transparent; flex: 1; padding: 6px 0; outline: none; }
+  .hit { justify-content: flex-start; font-size: 13px; padding: 5px 8px; font-weight: 400; background: var(--panel); text-align: left; }
+  .part .pi { color: var(--accent-ink); font-weight: 600; min-width: 1.2em; }
+  .pv { color: var(--muted); font-size: 12px; margin: 0; }
+  .accentbtn { border-color: var(--accent); background: var(--accent-soft); }
+  .sungpick { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+  .sungpick select { font-size: 12px; padding: 3px 6px; }
+  .verse { position: relative; }
+  .vlang { position: absolute; top: 6px; right: 58px; font-size: 11px; padding: 2px 4px; opacity: 0; transition: opacity 120ms var(--ease); }
+  .verse:hover .vlang, .vlang:focus, .vlang.set { opacity: 1; }
+  .vlang.set { border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .parttag { font-size: 11px; color: var(--accent-ink); font-weight: 600; }
   .setbar button, .setbar select, .setbar input { font-size: 13px; padding: 5px 8px; }
   .printlink { font-size: 13px; color: var(--accent-ink); align-self: center; padding: 0 4px; text-underline-offset: 3px; }
   .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }

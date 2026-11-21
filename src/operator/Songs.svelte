@@ -13,7 +13,7 @@
   });
   let collection = $state('');
   let filtered = $derived(
-    app.songs.filter((s) => (!collection || s.collectionKey === collection) && (!q || s.search.includes(q.toLowerCase()))),
+    app.songs.filter((s) => !s.medley && (!collection || s.collectionKey === collection) && (!q || s.search.includes(q.toLowerCase()))),
   );
   let primary = $derived(app.state!.profiles[0]?.languages[0] ?? 'pl');
 

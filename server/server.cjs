@@ -32,6 +32,25 @@ function slideKeys(song) {
   return song.order.filter((k) => Object.values(song.lyrics).some((l) => l[k]?.length));
 }
 
+const META = ['title', 'number', 'collection', 'collectionKey', 'author', 'year', 'composer', 'copyright', 'key'];
+
+// A medley stores only its parts. Slide keys become "<part>:<verse>" so parts never collide.
+function resolveMedley(song, getRaw) {
+  if (!song?.medley) return song;
+  const out = { ...song, order: [], lyrics: {}, parts: [] };
+  song.medley.forEach((p, i) => {
+    const src = getRaw(p.songId);
+    if (!src) return;
+    const meta = Object.fromEntries(META.map((k) => [k, src[k]]));
+    out.parts[i] = { songId: src.id, ...meta };
+    const keys = p.keys?.length ? p.keys : src.order;
+    for (const k of keys) out.order.push(`${i}:${k}`);
+    for (const [lang, verses] of Object.entries(src.lyrics ?? {}))
+      for (const k of new Set(keys)) if (verses[k]) (out.lyrics[lang] ??= {})[`${i}:${k}`] = verses[k];
+  });
+  return out;
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -53,19 +72,21 @@ function sendJson(res, code, body) {
 
 function songSummary(s) {
   const titles = Object.values(s.title ?? {});
-  const firstLines = Object.values(s.lyrics ?? {}).map((l) => l[s.order[0]]?.[0] ?? '');
+  const firstLines = Object.values(s.lyrics ?? {}).map((l) => l[s.order?.[0]]?.[0] ?? '');
   return {
     id: s.id,
     number: s.number ?? null,
     collection: s.collection ?? '',
     collectionKey: s.collectionKey ?? s.collection ?? '',
     title: s.title,
+    medley: !!s.medley,
     search: [s.number, s.collection, ...titles, ...firstLines].join(' ').toLowerCase(),
   };
 }
 
 function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
   const db = store.open(dataDir);
+  const getSong = (id) => resolveMedley(db.getSong(id), db.getSong);
   const state = db.state;
   const clients = new Set();
   let songsVersion = 0;
@@ -90,12 +111,18 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
   const fullState = () => ({
     ...state,
     fitted,
-    liveSong: state.live.songId ? db.getSong(state.live.songId) : null,
+    liveSong: liveSong(),
     songsVersion,
     importStatus,
     stImport: state.stImport ?? null,
     server: { port, ips: lanIps(), hostname: os.hostname() },
   });
+
+  // Sung-language overrides travel on the song so every display reads them the same way.
+  function liveSong() {
+    const s = state.live.songId ? getSong(state.live.songId) : null;
+    return s && state.sung[s.id] ? { ...s, sung: state.sung[s.id] } : s;
+  }
 
   function broadcast() {
     const msg = JSON.stringify({ type: 'state', state: fullState() });
@@ -103,7 +130,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
   }
 
   function enabledIndices(songId) {
-    const n = slideKeys(db.getSong(songId)).length;
+    const n = slideKeys(getSong(songId)).length;
     const off = new Set(state.disabled[songId] ?? []);
     const on = [...Array(n).keys()].filter((i) => !off.has(i));
     return on.length ? on : [...Array(n).keys()];
@@ -149,10 +176,10 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     },
     setAllVerses({ songId, enabled }) {
       if (enabled) delete state.disabled[songId];
-      else state.disabled[songId] = [...Array(Math.max(0, slideKeys(db.getSong(songId)).length - 1)).keys()].map((i) => i + 1);
+      else state.disabled[songId] = [...Array(Math.max(0, slideKeys(getSong(songId)).length - 1)).keys()].map((i) => i + 1);
     },
     songStep({ delta }) {
-      const cur = db.getSong(state.live.songId);
+      const cur = getSong(state.live.songId);
       if (!cur) return;
       const list = collectionSongs(cur.collectionKey ?? cur.collection);
       const i = list.findIndex((s) => s.id === cur.id);
@@ -185,7 +212,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     setlistLoad({ id }) {
       const x = state.savedSetlists.find((s) => s.id === id);
       if (!x) return;
-      state.setlist = x.ids.filter((sid) => db.getSong(sid));
+      state.setlist = x.ids.filter((sid) => getSong(sid));
       state.setlistName = x.name;
     },
     setlistDelete({ id }) {
@@ -210,6 +237,13 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     },
     markPresetsSet({ marks }) {
       if (Array.isArray(marks)) state.markPresets = [...new Set(marks.map((m) => String(m).trim()).filter(Boolean))];
+    },
+    // key "*" sets the language for the whole song. A verse key overrides it. Empty lang clears.
+    sungSet({ songId, key, lang }) {
+      const m = (state.sung[songId] ??= {});
+      if (lang) m[key] = String(lang);
+      else delete m[key];
+      if (!Object.keys(m).length) delete state.sung[songId];
     },
     setlistRename({ name }) {
       state.setlistName = String(name ?? '');
@@ -363,11 +397,13 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
 
     if (req.method === 'GET' && !id) return sendJson(res, 200, db.listSongs().map(songSummary));
     if (req.method === 'GET') {
-      const s = db.getSong(id);
+      const s = getSong(id);
       return s ? sendJson(res, 200, s) : sendJson(res, 404, { error: 'not found' });
     }
     if (req.method === 'POST' && !id) {
       const song = await readBody(req);
+      // Derived fields MUST NOT be stored on a medley.
+      if (song.medley) for (const k of ['order', 'lyrics', 'parts', 'sung']) delete song[k];
       if (!song.id) song.id = 'local-' + crypto.randomBytes(4).toString('hex');
       db.saveSong(song);
       broadcast();
@@ -375,6 +411,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     }
     if (req.method === 'DELETE' && id) {
       db.deleteSong(id);
+      delete state.sung[id];
       state.setlist = state.setlist.filter((x) => x !== id);
       if (state.live.songId === id) actions.clear();
       db.saveState();
@@ -389,11 +426,13 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const langs = state.languages.map((l) => l.code);
     const rows = state.setlist
-      .map((id) => db.getSong(id))
+      .map((id) => getSong(id))
       .filter(Boolean)
       .map((s, i) => {
         const titles = langs.map((l) => s.title?.[l]).filter(Boolean);
-        return `<tr><td class="i">${i + 1}</td><td class="c">${esc(s.collectionKey)} ${esc(s.number ?? '')}</td><td><b>${esc(titles[0] ?? '')}</b>${titles[1] ? `<br><span>${esc(titles[1])}</span>` : ''}</td><td class="k">${esc(s.key ?? '')}</td></tr>`;
+        const parts = (s.parts ?? []).filter(Boolean).map((p) => `${esc(p.collectionKey ?? '')} ${esc(p.number ?? '')} ${esc(langs.map((l) => p.title?.[l]).find(Boolean) ?? '')}${p.key ? ` (${esc(p.key)})` : ''}`);
+        const sub = parts.length ? `<br><span>${parts.join(' → ')}</span>` : titles[1] ? `<br><span>${esc(titles[1])}</span>` : '';
+        return `<tr><td class="i">${i + 1}</td><td class="c">${esc(s.collectionKey)} ${esc(s.number ?? '')}</td><td><b>${esc(titles[0] ?? '')}</b>${sub}</td><td class="k">${esc(s.key ?? '')}</td></tr>`;
       })
       .join('');
     const html = `<!doctype html><meta charset="utf-8"><title>${esc(state.setlistName || 'Setlist')}</title>
