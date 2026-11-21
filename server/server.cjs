@@ -147,11 +147,12 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     const song = (state.notes[songId] ??= {});
     const v = (song[key] ??= { text: '', marks: {} });
     v.marks ??= {};
+    v.comments ??= {};
     return v;
   }
   function pruneNotes(songId, key) {
     const v = state.notes[songId]?.[key];
-    if (v && !v.text && !Object.keys(v.marks).length) delete state.notes[songId][key];
+    if (v && !v.text && !Object.keys(v.marks).length && !Object.keys(v.comments ?? {}).length) delete state.notes[songId][key];
     if (state.notes[songId] && !Object.keys(state.notes[songId]).length) delete state.notes[songId];
   }
 
@@ -233,6 +234,13 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       const v = annotation(songId, key);
       if (mark) v.marks[line] = String(mark);
       else delete v.marks[line];
+      pruneNotes(songId, key);
+    },
+    lineComment({ songId, key, line, text }) {
+      const v = annotation(songId, key);
+      const t = String(text ?? '').trim();
+      if (t) v.comments[line] = t;
+      else delete v.comments[line];
       pruneNotes(songId, key);
     },
     markPresetsSet({ marks }) {

@@ -311,7 +311,7 @@
                 <h3>{t("Show")}</h3>
                 <label class="check"><input type="checkbox" bind:checked={draft.showVerseLabel} /> {t("Verse label")} <small>{t("1., Ref., Bridge")}</small></label>
                 <label class="check"><input type="checkbox" bind:checked={draft.text.shadow} /> {t("Text shadow")}</label>
-                <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> {t("Notes &amp; marks")} <small>{t("from Annotate: Solo, All…")}</small></label>
+                <label class="check"><input type="checkbox" bind:checked={draft.showNotes} /> {t("Notes & marks")} <small>{t("from Annotate: Solo, All…")}</small></label>
                 {#if isConf}<label class="check"><input type="checkbox" bind:checked={draft.blankWithScreens} /> {t("Go black with Blank")} <small>{t("off: dims and shows a badge")}</small></label>{/if}
               </div>
             {:else if tab === 'Languages'}

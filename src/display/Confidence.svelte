@@ -30,6 +30,8 @@
     return song.lyrics[l]?.[k] ?? Object.values(song.lyrics).find((l) => l[k]?.length)?.[k] ?? [];
   };
 
+  // Only the start of the next verse: the current verse keeps the space and its size.
+  const NEXT_LINES = 2;
   let meta = $derived(song ? metaFor(song, key) : null);
   let nextMeta = $derived(song && nextKey ? metaFor(song, nextKey) : null);
 
@@ -96,6 +98,11 @@
 {#if blank && profile.blankWithScreens}
   <div class="conf black" style:background={transparent ? 'transparent' : null}></div>
 {:else}
+{#snippet markedLine(line: string, mark: string | undefined, comment: string | undefined)}
+  <!-- The dotted leader ties the right-aligned comment and mark to their line. -->
+  <div class="line marked"><span class="text" class:has={!!(mark || comment)}>{line}</span>{#if mark || comment}<span class="leader"></span>{#if comment}<span class="cmt">{comment}</span>{/if}{#if mark}<span class="mark">{mark}</span>{/if}{/if}</div>
+{/snippet}
+
 <div class="conf" style:font-family={profile.text.font} style:background={transparent ? 'transparent' : null}>
   <header>
     {#if song && meta}
@@ -125,14 +132,14 @@
     {#if key}
       {#if profile.showVerseLabel}<div class="label">{verseLabel(key)}</div>{/if}
       {#if notes?.[key]?.text}<div class="note">{notes[key].text}</div>{/if}
-      {#each lines(key) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[key]?.marks?.[n]}<span class="mark">{notes[key].marks[n]}</span>{/if}</div>{/each}
+      {#each lines(key) as line, n}{@render markedLine(line, notes?.[key]?.marks?.[n], notes?.[key]?.comments?.[n])}{/each}
     {/if}
   </section>
 
   <section class="next" style:line-height={profile.text.lineHeight}>
     {#if nextKey}
       <div class="nlabel">{tIn(lang, 'Next')} · {#if nextMeta && nextMeta !== meta}<span class="nsong">{nextMeta.collectionKey ?? ''} {nextMeta.number ?? ''} {nextMeta.title?.[lang] ?? Object.values(nextMeta.title ?? {})[0] ?? ''}</span> · {/if}{verseLabel(nextKey)}{#if notes?.[nextKey]?.text} · <span class="nnote">{notes[nextKey].text}</span>{/if}</div>
-      {#each lines(nextKey) as line, n}<div class="line marked"><span class="text">{line}</span>{#if notes?.[nextKey]?.marks?.[n]}<span class="mark">{notes[nextKey].marks[n]}</span>{/if}</div>{/each}
+      {#each lines(nextKey).slice(0, NEXT_LINES) as line, n}{@render markedLine(n === NEXT_LINES - 1 && lines(nextKey).length > NEXT_LINES ? line + ' …' : line, notes?.[nextKey]?.marks?.[n], notes?.[nextKey]?.comments?.[n])}{/each}
     {:else if song}
       <div class="nlabel">{tIn(lang, 'End of song')}</div>
     {/if}
@@ -180,10 +187,13 @@
   /* Marks sit in a right-hand gutter so the lyrics keep their left edge. */
   .marked { display: flex; align-items: center; gap: 0.6em; }
   .marked .text { flex: 1; min-width: 0; }
+  .marked .text.has { flex: 0 1 auto; }
+  .cmt { flex: none; max-width: 40%; font-size: 0.45em; font-style: italic; font-weight: 600; color: #cfcfcf; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .leader { flex: 1; min-width: 1em; align-self: center; border-bottom: 0.07em dotted #6a6a6a; margin-top: 0.15em; }
   .nowrap .text { white-space: nowrap; overflow: hidden; }
   .note { text-align: right; font-size: 0.45em; font-style: italic; color: #cfcfcf; font-weight: 600; margin-bottom: 6px; }
   .nnote { font-style: italic; color: #9a9a9a; }
-  .mark { display: inline-block; font-size: 0.42em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
+  .mark { display: inline-block; font-size: 0.5em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .medley { flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7em; color: #8b877f; border: 1px solid #3a3a3a; border-radius: 999px; padding: 2px 12px; }
   .nsong { color: #cfcfcf; }
   .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }

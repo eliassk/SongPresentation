@@ -136,4 +136,6 @@ export interface VerseNote {
   text: string;
   /** Mark per line index, e.g. "Solo". */
   marks: Record<number, string>;
+  /** Free-text comment per line index. Shown beside the line, after its mark. */
+  comments?: Record<number, string>;
 }

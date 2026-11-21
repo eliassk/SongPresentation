@@ -26,6 +26,8 @@
   import Printer from '@lucide/svelte/icons/printer';
   import FilePlus from '@lucide/svelte/icons/file-plus';
   import Languages from '@lucide/svelte/icons/languages';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import MessageSquareText from '@lucide/svelte/icons/message-square-text';
 
   let st = $derived(app.state!);
   // Which display the on-air card previews. Per operator, so it lives in localStorage.
@@ -246,6 +248,13 @@
     editing = null;
     link.send('lineMark', { songId: selected.id, key: ed.key, line: ed.line, mark: (e.currentTarget as HTMLInputElement).value.trim() });
   }
+  // Line comments show as an icon. Hover shows the text, click opens a popup to edit it.
+  let commenting = $state<{ key: string; line: number } | null>(null);
+  function saveComment(key: string, line: number, e: Event) {
+    const text = (e.currentTarget as HTMLTextAreaElement).value.trim();
+    commenting = null;
+    if (selected && text !== (notes[key]?.comments?.[line] ?? '')) link.send('lineComment', { songId: selected.id, key, line, text });
+  }
   function setPresets(e: Event) {
     link.send('markPresetsSet', { marks: (e.currentTarget as HTMLInputElement).value.split(',') });
   }
@@ -306,6 +315,23 @@
 </script>
 
 <svelte:window onkeydown={onKey} />
+
+{#snippet commentIcon(k: string, n: number, text: string | undefined)}
+  <span class="cmtwrap">
+    <button class="cmtbtn" class:set={!!text} title={text || t('Comment…')} aria-label={t('Comment for this line')} onclick={() => (commenting = commenting?.key === k && commenting.line === n ? null : { key: k, line: n })}>
+      {#if text}<MessageSquareText size={14} />{:else}<MessageSquare size={14} />{/if}
+    </button>
+    {#if commenting?.key === k && commenting.line === n}
+      <div class="cmtpop">
+        <!-- svelte-ignore a11y_autofocus -->
+        <textarea autofocus rows="3" placeholder={t('Comment…')} aria-label={t('Comment for this line')}
+          onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') commenting = null; }}
+          onblur={(e) => saveComment(k, n, e)}>{text ?? ''}</textarea>
+        <span class="hint">Enter ↵</span>
+      </div>
+    {/if}
+  </span>
+{/snippet}
 
 <div class="live">
   <!-- Library -->
@@ -514,6 +540,7 @@
                           {:else if li === 0}
                             <div class="markline">
                               <button class="mark" class:empty={!note?.marks?.[n]} title={t("Click to type your own text")} aria-label={t("Edit mark")} onclick={(e) => customMark(k, n, e)}>{note?.marks?.[n] ?? '+'}</button><button class="linetext" onclick={() => cycleMark(k, n)} oncontextmenu={(e) => customMark(k, n, e)} title="Click to cycle: {MARKS.join(', ')}, none">{line}</button>
+                              {@render commentIcon(k, n, note?.comments?.[n])}
                             </div>
                           {:else}<div>{line}</div>{/if}
                         {/each}
@@ -533,7 +560,7 @@
                 <div class="vcols" style:grid-template-columns="repeat({verseLangs(k).length}, 1fr)">
                   {#each verseLangs(k) as l, li}
                     <div class:second={li > 0}>
-                      {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}</div>{:else}<div class="muted">{t("No")} {l.toUpperCase()} {t("text")}</div>{/each}
+                      {#each selected.lyrics[l]?.[k] ?? [] as line, n}<div>{#if li === 0 && note?.marks?.[n]}<span class="mark">{note.marks[n]}</span>{/if}{line}{#if li === 0 && note?.comments?.[n]}<span class="cmttag" title={note.comments[n]}><MessageSquareText size={13} /></span>{/if}</div>{:else}<div class="muted">{t("No")} {l.toUpperCase()} {t("text")}</div>{/each}
                     </div>
                   {/each}
                 </div>
@@ -749,9 +776,17 @@
   .markline:hover { background: var(--accent-soft); }
   button.mark { border: none; cursor: text; flex: none; }
   button.mark:hover { outline: 2px solid var(--accent-line); }
-  .linetext { flex: 1; text-align: left; background: transparent; border: none; padding: 0; font: inherit; font-weight: 400; line-height: 1.7; }
+  .linetext { flex: 1; justify-content: flex-start; text-align: left; background: transparent; border: none; padding: 0; font: inherit; font-weight: 400; line-height: 1.7; }
   .linetext:hover { background: transparent; }
   .noteinput { font-size: 13px; padding: 4px 8px; }
+  .cmtwrap { position: relative; flex: none; margin-left: 8px; align-self: center; }
+  .cmtbtn { padding: 2px 4px; border: none; background: transparent; color: var(--muted); opacity: 0; line-height: 0; }
+  .markline:hover .cmtbtn, .cmtbtn:focus-visible { opacity: 1; }
+  .cmtbtn.set { opacity: 1; color: var(--accent-ink); }
+  .cmtpop { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; width: 260px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .cmtpop textarea { width: 100%; font: inherit; font-size: 13px; resize: vertical; box-sizing: border-box; }
+  .cmtpop .hint { align-self: flex-end; font-size: 11px; }
+  .cmttag { color: var(--accent-ink); margin-left: 8px; display: inline-flex; vertical-align: -2px; cursor: help; }
   .markinput { font-size: 12px; padding: 1px 6px; width: 9em; margin-right: 8px; }
   .presets { display: flex; align-items: center; gap: 10px; padding: 10px 20px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
   .presets input { font-size: 13px; padding: 4px 8px; }

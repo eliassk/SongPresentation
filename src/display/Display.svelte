@@ -118,7 +118,7 @@
             {#if i === 0 && notes?.[k]?.text}<div class="note">{notes[k].text}</div>{/if}
             {#each song!.lyrics[l]?.[k] ?? [] as line, n}
               {#if i === 0 && notes}
-                <div class="line marked" class:nowrap={profile.text.noWrap}><span class="text">{line}</span>{#if notes[k]?.marks?.[n]}<span class="mark">{notes[k].marks[n]}</span>{/if}</div>
+                <div class="line marked" class:nowrap={profile.text.noWrap}><span class="text">{line}</span>{#if notes[k]?.comments?.[n]}<span class="cmt">{notes[k].comments[n]}</span>{/if}{#if notes[k]?.marks?.[n]}<span class="mark">{notes[k].marks[n]}</span>{/if}</div>
               {:else}
                 <div class="line" class:nowrap={profile.text.noWrap}>{line}</div>
               {/if}
@@ -293,6 +293,7 @@
   /* Marks are tied to line positions of the first language, so only the first column shows them. */
   .marked { display: flex; align-items: center; gap: 0.6em; }
   .marked .text { flex: 1; min-width: 0; }
+  .cmt { flex: none; max-width: 40%; font-size: 0.45em; font-style: italic; color: #cfcfcf; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .note { text-align: right; font-size: 0.5em; font-style: italic; color: #cfcfcf; margin-bottom: 0.2em; }
   .mark { display: inline-block; font-size: 0.45em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; font-style: normal; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .line.nowrap {
