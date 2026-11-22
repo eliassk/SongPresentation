@@ -76,16 +76,28 @@ function versesFrom(raw) {
   return order.length ? { order, verses } : null;
 }
 
-/** A single chorus listed once is sung after every verse. */
+/**
+ * Choruses listed once are sung after every verse. Each chorus repeats until the next one takes over.
+ * An order that already repeats a chorus is kept as it is.
+ */
 function expandChorus(order) {
-  const choruses = order.filter((k) => /^c/.test(k));
-  if (choruses.length !== 1 || order.indexOf('c') !== 1) return order;
+  const isChorus = (k) => /^c\d*$/.test(k);
+  const choruses = order.filter(isChorus);
+  if (!choruses.length || new Set(choruses).size !== choruses.length) return order;
   const out = [];
-  for (const k of order) {
-    if (k === 'c') continue;
+  let active = null;
+  order.forEach((k, i) => {
+    if (isChorus(k)) {
+      active = k;
+      if (out[out.length - 1] !== k) out.push(k);
+      return;
+    }
     out.push(k);
-    if (/^\d+$/.test(k)) out.push('c');
-  }
+    if (!/^\d+$/.test(k)) return;
+    const next = order[i + 1];
+    const chorus = isChorus(next) ? next : active;
+    if (chorus) out.push(chorus);
+  });
   return out;
 }
 
