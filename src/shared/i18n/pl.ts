@@ -1,5 +1,8 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const pl: Record<string, string> = {
+  'Session': 'Sesja',
+  'Stop following': 'Przestań śledzić',
+  'Session code': 'Kod sesji',
   'Not signed in to SongTreasures, or the session expired.': 'Nie zalogowano do SongTreasures albo sesja wygasła.',
   'Following session': 'Śledzona sesja',
   'Stop': 'Zatrzymaj',

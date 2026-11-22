@@ -371,25 +371,30 @@
       </label>
       {#if stS?.available}
         {#if stS.code}
-          <div class="stsession">
-            <Radio size={14} />
-            <span class="grow">{t("Following session")} <b class="num">{stS.code}</b></span>
-            <button class="small" onclick={() => link.send('stFollow', { code: '' })}>{t("Stop")}</button>
+          <div class="stbox">
+            <div class="sthead">
+              <span class="stdot" class:err={!!stS.error}></span>
+              <span class="stlbl">{t("Session")}</span>
+              <b class="num stcode">{stS.code}</b>
+              <button class="stx" onclick={() => link.send('stFollow', { code: '' })} title={t("Stop following")} aria-label={t("Stop following")}><X size={14} /></button>
+            </div>
+            {#if stS.error}<p class="stmsg">{t(stS.error)}</p>
+            {:else if stSuggest}
+              <button class="stsuggest" onclick={() => select(stSuggest!.songId!)} title={t("Open the song the leader chose")}>
+                <span class="stsong">
+                  <span class="lbl">{t("Leader chose")}</span>
+                  <span class="sttitle"><b class="num">{stSuggest.collection} {stSuggest.number}</b> {stSuggest.title}</span>
+                </span>
+                <ChevronRight size={18} />
+              </button>
+            {:else if stS.suggestion && !stS.suggestion.songId}
+              <p class="stmsg">{t("Leader chose")} <b class="num">{stS.suggestion.collection} {stS.suggestion.number}</b>. {t("This song is not in your library.")}</p>
+            {/if}
           </div>
-          {#if stS.error}<p class="sterr">{t(stS.error)}</p>
-          {:else if stSuggest}
-            <button class="stsuggest" onclick={() => select(stSuggest!.songId!)} title={t("Open the song the leader chose")}>
-              <span class="lbl">{t("Leader chose")}</span>
-              <span class="grow"><b class="num">{stSuggest.collection} {stSuggest.number}</b> {stSuggest.title}</span>
-              <ChevronRight size={16} />
-            </button>
-          {:else if stS.suggestion && !stS.suggestion.songId}
-            <p class="sterr">{t("Leader chose")} {stS.suggestion.collection} {stS.suggestion.number}. {t("This song is not in your library.")}</p>
-          {/if}
         {:else}
-          <form class="stsession" onsubmit={(e) => { e.preventDefault(); if (stCode.trim()) link.send('stFollow', { code: stCode }); }}>
-            <Radio size={14} />
-            <input class="grow num" placeholder={t("SongTreasures session code")} bind:value={stCode} aria-label={t("SongTreasures session code")} />
+          <form class="stform" onsubmit={(e) => { e.preventDefault(); if (stCode.trim()) link.send('stFollow', { code: stCode }); }}>
+            <Radio size={15} />
+            <input class="grow num" placeholder={t("Session code")} bind:value={stCode} aria-label={t("SongTreasures session code")} title={t("SongTreasures session code")} />
             <button class="small" type="submit" disabled={!stCode.trim()}>{t("Follow")}</button>
           </form>
         {/if}
@@ -781,11 +786,21 @@
   .parttag { font-size: 11px; color: var(--accent-ink); font-weight: 600; }
   .setbar button, .setbar select, .setbar input { font-size: 13px; padding: 5px 8px; }
   .printlink { font-size: 13px; color: var(--accent-ink); align-self: center; padding: 0 4px; text-underline-offset: 3px; }
-  .stsession { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); }
-  .stsession input { text-transform: uppercase; }
-  .stsuggest { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+  .stform { display: flex; gap: 8px; align-items: center; color: var(--text-2); }
+  .stform input { text-transform: uppercase; min-width: 0; }
+  .stbox { display: flex; flex-direction: column; gap: 8px; }
+  .sthead { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+  .stdot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; animation: stpulse 2s ease-in-out infinite; }
+  .stdot.err { background: var(--text-3, #999); animation: none; }
+  @keyframes stpulse { 50% { opacity: 0.35; } }
+  .stcode { color: var(--text); letter-spacing: 0.04em; }
+  .stx { margin-left: auto; padding: 4px; border: none; background: none; color: var(--text-2); display: inline-flex; }
+  .stx:hover { color: var(--text); background: var(--panel-2); }
+  .stsuggest { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 8px 10px; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+  .stsong { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .stsuggest .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); }
-  .sterr { margin: 0; font-size: 12px; color: var(--text-2); }
+  .sttitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stmsg { margin: 0; font-size: 12px; color: var(--text-2); }
   .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }
 
   .col > .list { flex: 1 1 0; flex-shrink: 1; min-height: 200px; overflow: auto; padding: 6px; }

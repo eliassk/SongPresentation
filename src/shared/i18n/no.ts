@@ -1,5 +1,8 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const no: Record<string, string> = {
+  'Session': 'Økt',
+  'Stop following': 'Slutt å følge',
+  'Session code': 'Øktkode',
   'Not signed in to SongTreasures, or the session expired.': 'Ikke logget inn på SongTreasures, eller økten er utløpt.',
   'Following session': 'Følger økt',
   'Stop': 'Stopp',
