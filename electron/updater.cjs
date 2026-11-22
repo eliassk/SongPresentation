@@ -8,7 +8,13 @@ function initUpdater(getWindow) {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // "Later" MUST hold for that version until the app restarts, so frequent checks do not nag mid-service.
+  let declined = null;
+  let ready = null;
+  let asking = false;
   autoUpdater.on('update-available', async (info) => {
+    if (asking || downloading || declined === info.version || ready === info.version) return;
+    asking = true;
     const { response } = await dialog.showMessageBox(getWindow(), {
       type: 'info',
       title: 'Update available',
@@ -18,7 +24,11 @@ function initUpdater(getWindow) {
       defaultId: 0,
       cancelId: 1,
     });
-    if (response !== 0) return;
+    asking = false;
+    if (response !== 0) {
+      declined = info.version;
+      return;
+    }
     downloading = true;
     progress(0);
     autoUpdater.downloadUpdate().catch(fail);
@@ -49,6 +59,7 @@ function initUpdater(getWindow) {
 
   autoUpdater.on('update-downloaded', async (info) => {
     downloading = false;
+    ready = info.version;
     progress(null);
     const { response } = await dialog.showMessageBox(getWindow(), {
       type: 'info',
@@ -72,9 +83,18 @@ function initUpdater(getWindow) {
     dialog.showErrorBox('Update failed', String((e && e.message) || e));
   }
 
-  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  // Checks every 30 minutes, and when the app comes back to the front after 10 quiet minutes.
+  let lastCheck = 0;
+  const check = () => {
+    if (downloading) return;
+    lastCheck = Date.now();
+    autoUpdater.checkForUpdates().catch(() => {});
+  };
   check();
-  setInterval(check, 4 * 60 * 60e3);
+  setInterval(check, 30 * 60e3);
+  app.on('browser-window-focus', () => {
+    if (Date.now() - lastCheck > 10 * 60e3) check();
+  });
 }
 
 module.exports = { initUpdater };
