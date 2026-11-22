@@ -185,9 +185,11 @@
   .current.dim { opacity: 0.35; }
   .shadow { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9); }
   .label { font-size: 0.5em; color: #cfcfcf; font-weight: 700; margin-bottom: 6px; }
+  /* Bold and bright, but well below the current verse so it keeps most of the space. */
   .next {
-    font-size: 38px;
-    color: #8b877f;
+    font-size: 44px;
+    font-weight: 600;
+    color: #d2cec6;
     border-top: 2px solid #2a2a2a;
     padding-top: 18px;
     max-height: 34vh;
@@ -205,7 +207,7 @@
   .mark { display: inline-block; font-size: 0.5em; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #cfcfcf; color: #000; border-radius: 0.25em; padding: 0.1em 0.4em; flex: none; text-shadow: none; }
   .medley { flex: none; max-width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7em; color: #8b877f; border: 1px solid #3a3a3a; border-radius: 999px; padding: 2px 12px; }
   .nsong { color: #cfcfcf; }
-  .nlabel { font-size: 0.7em; color: #6f6a61; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
+  .nlabel { font-size: 0.7em; color: #a39e94; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.02em; }
   .black { background: #000; }
   .blanked {
     position: absolute;
