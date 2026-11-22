@@ -1,5 +1,15 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const pl: Record<string, string> = {
+  'Not signed in to SongTreasures, or the session expired.': 'Nie zalogowano do SongTreasures albo sesja wygasła.',
+  'Following session': 'Śledzona sesja',
+  'Stop': 'Zatrzymaj',
+  'Leader chose': 'Prowadzący wybrał',
+  'Open the song the leader chose': 'Otwórz pieśń wybraną przez prowadzącego',
+  'This song is not in your library.': 'Tej pieśni nie ma w Twojej bibliotece.',
+  'SongTreasures session code': 'Kod sesji SongTreasures',
+  'Follow': 'Śledź',
+  'Session not found.': 'Nie znaleziono sesji.',
+  'Session has expired.': 'Sesja wygasła.',
   'Re-import all': 'Importuj wszystko ponownie',
   'Download every song again, even unchanged ones': 'Pobierz ponownie każdą pieśń, także niezmienione',
   'Download every imported song again? Notes and languages are kept. Skipped verses reset on songs whose verse order changes.': 'Pobrać ponownie wszystkie zaimportowane pieśni? Notatki i języki zostaną zachowane. Pominięte zwrotki zostaną zresetowane w pieśniach, w których zmieni się kolejność.',

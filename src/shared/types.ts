@@ -130,6 +130,13 @@ export interface AppState {
   songsVersion: number;
   stImport: { collections: { id: string; name: string }[]; languages: string[]; lastSync: string | null } | null;
   importStatus: { running: boolean; done: number; total: number; message: string; error: string };
+  /** SongTreasures band session being followed. `available` needs a sign-in and imported songs. */
+  stSession?: {
+    available: boolean;
+    code: string;
+    error: string;
+    suggestion: { songId: string | null; number: number; collection: string; title: string; updatedAt: string | null } | null;
+  };
 }
 
 export interface VerseNote {

@@ -201,4 +201,22 @@ async function importCollections({ token, collections, languages, dataDir, save,
   return { imported, total, added, unchanged };
 }
 
-module.exports = { listCollections, importCollections };
+/**
+ * Reads a SongTreasures band-sync session, the one a song leader follows from the app.
+ * Shape verified 2026-11-22 against presentation.songtreasures.app: Firestore bandSessions/<CODE>.
+ */
+async function readBandSession(token, code) {
+  const url = `https://firestore.googleapis.com/v1/projects/songtreasures/databases/(default)/documents/bandSessions/${encodeURIComponent(code.trim().toUpperCase())}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 404) throw new Error('Session not found.');
+  if (res.status === 401 || res.status === 403) throw Object.assign(new Error('Not signed in to SongTreasures, or the session expired.'), { code: 401 });
+  if (!res.ok) throw new Error(`SongTreasures session: HTTP ${res.status}`);
+  const f = (await res.json()).fields ?? {};
+  const val = (x) => x && (x.stringValue ?? x.integerValue ?? x.doubleValue ?? x.timestampValue ?? null);
+  const expireAt = val(f.expireAt);
+  if (expireAt && new Date(expireAt) < new Date()) throw new Error('Session has expired.');
+  const number = val(f.songNumber);
+  return { songbookId: val(f.songbookId), songNumber: number == null ? null : Number(number), updatedAt: val(f.updatedAt) };
+}
+
+module.exports = { listCollections, importCollections, readBandSession };

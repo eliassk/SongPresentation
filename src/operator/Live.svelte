@@ -6,6 +6,7 @@
   import { slideKeys, verseLabel, verseCount, sungLanguages } from '../shared/slides';
   import type { Song, MedleyPart } from '../shared/types';
   import Check from '@lucide/svelte/icons/check';
+  import Radio from '@lucide/svelte/icons/radio';
   import Play from '@lucide/svelte/icons/play';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -104,6 +105,11 @@
       localStorage.setItem('followSelection', follow ? '1' : '0');
     } catch {}
   });
+
+  // SongTreasures band session. The leader's song is offered with one click, never opened by itself.
+  let stCode = $state('');
+  let stS = $derived(st.stSession);
+  let stSuggest = $derived(stS?.suggestion?.songId && stS.suggestion.songId !== selected?.id ? stS.suggestion : null);
 
   async function select(id: string) {
     if (follow && id !== st.live.songId) link.send('setLive', { songId: id });
@@ -363,6 +369,31 @@
       <label class="follow" title={t("Clicking a song puts it on the screens immediately")}>
         <input type="checkbox" bind:checked={follow} /> {t("Screens follow selection")}
       </label>
+      {#if stS?.available}
+        {#if stS.code}
+          <div class="stsession">
+            <Radio size={14} />
+            <span class="grow">{t("Following session")} <b class="num">{stS.code}</b></span>
+            <button class="small" onclick={() => link.send('stFollow', { code: '' })}>{t("Stop")}</button>
+          </div>
+          {#if stS.error}<p class="sterr">{t(stS.error)}</p>
+          {:else if stSuggest}
+            <button class="stsuggest" onclick={() => select(stSuggest!.songId!)} title={t("Open the song the leader chose")}>
+              <span class="lbl">{t("Leader chose")}</span>
+              <span class="grow"><b class="num">{stSuggest.collection} {stSuggest.number}</b> {stSuggest.title}</span>
+              <ChevronRight size={16} />
+            </button>
+          {:else if stS.suggestion && !stS.suggestion.songId}
+            <p class="sterr">{t("Leader chose")} {stS.suggestion.collection} {stS.suggestion.number}. {t("This song is not in your library.")}</p>
+          {/if}
+        {:else}
+          <form class="stsession" onsubmit={(e) => { e.preventDefault(); if (stCode.trim()) link.send('stFollow', { code: stCode }); }}>
+            <Radio size={14} />
+            <input class="grow num" placeholder={t("SongTreasures session code")} bind:value={stCode} aria-label={t("SongTreasures session code")} />
+            <button class="small" type="submit" disabled={!stCode.trim()}>{t("Follow")}</button>
+          </form>
+        {/if}
+      {/if}
     </div>
 
     <div class="card list" role="list">
@@ -750,6 +781,11 @@
   .parttag { font-size: 11px; color: var(--accent-ink); font-weight: 600; }
   .setbar button, .setbar select, .setbar input { font-size: 13px; padding: 5px 8px; }
   .printlink { font-size: 13px; color: var(--accent-ink); align-self: center; padding: 0 4px; text-underline-offset: 3px; }
+  .stsession { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); }
+  .stsession input { text-transform: uppercase; }
+  .stsuggest { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+  .stsuggest .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent); }
+  .sterr { margin: 0; font-size: 12px; color: var(--text-2); }
   .follow { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-2); cursor: pointer; }
 
   .col > .list { flex: 1 1 0; flex-shrink: 1; min-height: 200px; overflow: auto; padding: 6px; }

@@ -105,6 +105,58 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     return t;
   }
 
+  // Follows a SongTreasures band session. The leader's song is only suggested, never put live.
+  const hasStSongs = () => !!state.stImport?.collections?.length || db.listSongs().some((s) => s.source === 'songtreasures');
+  let stSession = { code: '', suggestion: null, error: '' };
+  let stTimer = null;
+
+  function stSongFor(songbookId, number) {
+    const col = state.stImport?.collections?.find((c) => c.id === songbookId);
+    if (!col || number == null) return null;
+    return db.listSongs().find((s) => s.source === 'songtreasures' && s.collection === col.name && s.number === number) ?? null;
+  }
+
+  async function stPoll() {
+    const code = stSession.code;
+    if (!code) return;
+    try {
+      const r = await songtreasures.readBandSession(await stTokenGet(false), code);
+      if (stSession.code !== code) return;
+      const song = stSongFor(r.songbookId, r.songNumber);
+      const col = state.stImport?.collections?.find((c) => c.id === r.songbookId);
+      const suggestion = r.songNumber == null ? null : {
+        songId: song?.id ?? null,
+        number: r.songNumber,
+        collection: song?.collectionKey ?? col?.name ?? '',
+        title: song ? (Object.values(song.title ?? {})[0] ?? '') : '',
+        updatedAt: r.updatedAt,
+      };
+      const next = { code, suggestion, error: '' };
+      if (JSON.stringify(next) !== JSON.stringify(stSession)) {
+        stSession = next;
+        broadcast();
+      }
+    } catch (e) {
+      if (e.code === 401) stToken = null;
+      if (stSession.code === code && stSession.error !== e.message) {
+        stSession = { ...stSession, error: e.message };
+        broadcast();
+      }
+    }
+  }
+
+  function stFollow(code) {
+    clearInterval(stTimer);
+    stTimer = null;
+    stSession = { code: (code ?? '').trim().toUpperCase(), suggestion: null, error: '' };
+    if (!stSession.code) return;
+    stPoll();
+    stTimer = setInterval(stPoll, 3000);
+  }
+
+  // A silent check, so the follow box shows only with a live SongTreasures sign-in.
+  if (getSongTreasuresToken && hasStSongs()) stTokenGet(false).then(() => broadcast(), () => {});
+
   // Text size each display fitted to. Reported by the displays, not saved.
   const fitted = {};
 
@@ -115,6 +167,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
     songsVersion,
     importStatus,
     stImport: state.stImport ?? null,
+    stSession: { ...stSession, available: !!stToken && hasStSongs() },
     server: { port, ips: lanIps(), hostname: os.hostname() },
   });
 
@@ -157,6 +210,9 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
   }
 
   const actions = {
+    stFollow({ code }) {
+      stFollow(code);
+    },
     setLive({ songId, slideIndex = 0 }) {
       const on = enabledIndices(songId);
       const target = on.find((i) => i >= slideIndex) ?? on[on.length - 1] ?? 0;
@@ -364,6 +420,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
       }
       if (route === 'login' && req.method === 'POST') {
         await stTokenGet(true);
+        broadcast();
         return sendJson(res, 200, { ok: true });
       }
       if (route === 'collections') return sendJson(res, 200, await songtreasures.listCollections(await stTokenGet(false), dataDir));
