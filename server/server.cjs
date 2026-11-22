@@ -323,7 +323,12 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
         languages,
         dataDir,
         known,
-        save: (song) => db.saveSong(song),
+        save: (song) => {
+          // Skipped verses are stored by position, so they MUST reset when the order changes.
+          const prev = db.getSong(song.id);
+          if (prev && JSON.stringify(prev.order) !== JSON.stringify(song.order)) delete state.disabled[song.id];
+          db.saveSong(song);
+        },
         progress: (p) => {
           importStatus = { ...importStatus, ...p };
           broadcast();
@@ -373,7 +378,8 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
         db.saveState();
         return startImport({ collections, languages }, null, res);
       }
-      if (route === 'resync' && req.method === 'POST') {
+      // A full re-import fetches every song again, changed or not.
+      if ((route === 'resync' || route === 'reimport') && req.method === 'POST') {
         let cfg = state.stImport;
         const imported = db.listSongs().filter((s) => s.source === 'songtreasures');
         if (!cfg?.collections?.length && imported.length) {
@@ -387,6 +393,7 @@ function startServer({ port, dataDir, distDir, getSongTreasuresToken = null }) {
           db.saveState();
         }
         if (!cfg?.collections?.length) return sendJson(res, 400, { error: 'Import a collection first.' });
+        if (route === 'reimport') return startImport(cfg, null, res);
         const known = new Map(db.listSongs().filter((s) => s.source === 'songtreasures').map((s) => [s.id, s.remoteUpdatedAt ?? null]));
         return startImport(cfg, known, res);
       }

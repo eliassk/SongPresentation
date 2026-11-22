@@ -1,5 +1,8 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const pl: Record<string, string> = {
+  'Re-import all': 'Importuj wszystko ponownie',
+  'Download every song again, even unchanged ones': 'Pobierz ponownie każdą pieśń, także niezmienione',
+  'Download every imported song again? Notes and languages are kept. Skipped verses reset on songs whose verse order changes.': 'Pobrać ponownie wszystkie zaimportowane pieśni? Notatki i języki zostaną zachowane. Pominięte zwrotki zostaną zresetowane w pieśniach, w których zmieni się kolejność.',
   'Live edit': 'Edycja na żywo',
   'Discard': 'Odrzuć',
   'Apply to screens': 'Zastosuj na ekranach',

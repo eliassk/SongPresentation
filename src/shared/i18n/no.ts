@@ -1,5 +1,8 @@
 // Keys are the English UI text. Keep placeholders like {name} unchanged.
 const no: Record<string, string> = {
+  'Re-import all': 'Importer alt på nytt',
+  'Download every song again, even unchanged ones': 'Last ned hver sang på nytt, også uendrede',
+  'Download every imported song again? Notes and languages are kept. Skipped verses reset on songs whose verse order changes.': 'Laste ned alle importerte sanger på nytt? Notater og språk beholdes. Hoppede vers nullstilles i sanger der versrekkefølgen endres.',
   'Live edit': 'Direkte redigering',
   'Discard': 'Forkast',
   'Apply to screens': 'Bruk på skjermene',

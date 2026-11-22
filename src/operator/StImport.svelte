@@ -55,10 +55,11 @@
     }
   }
 
-  async function resync() {
+  async function resync(full = false) {
+    if (full && !confirm(t('Download every imported song again? Notes and languages are kept. Skipped verses reset on songs whose verse order changes.'))) return;
     error = '';
     try {
-      await api('resync', {});
+      await api(full ? 'reimport' : 'resync', {});
     } catch (e) {
       error = (e as Error).message;
     }
@@ -107,7 +108,8 @@
   <h2 class="nomargin">SongTreasures</h2>
   {#if available && (cfg?.collections.length || app.songs.some((x) => x.id.startsWith('st:')))}
     <div class="sync">
-      <button class="primary" disabled={status.running} onclick={resync}>{status.running ? t('Working…') : t('Check for updates')}</button>
+      <button class="primary" disabled={status.running} onclick={() => resync()}>{status.running ? t('Working…') : t('Check for updates')}</button>
+      <button disabled={status.running} onclick={() => resync(true)} title={t("Download every song again, even unchanged ones")}>{t("Re-import all")}</button>
       <p class="muted small">
         {#if cfg}{cfg.collections.map((c) => c.name).join(', ')} · {cfg.languages.join(', ').toUpperCase()}{:else}{t("Imported collections")}{/if}
         {#if cfg?.lastSync}<br />{t("Last checked")} {new Date(cfg.lastSync).toLocaleString()}{/if}
