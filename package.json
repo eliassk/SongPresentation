@@ -59,7 +59,7 @@
         "provider": "github",
         "owner": "eliassk",
         "repo": "SongPresentation",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ]
   },

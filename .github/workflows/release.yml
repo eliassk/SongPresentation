@@ -11,10 +11,12 @@ permissions:
 jobs:
   # One job creates the release first. Parallel builds that each create it make a duplicate draft
   # that swallows the Windows installer.
+  # It MUST stay a draft until every build has uploaded: the apps read the newest published release,
+  # and one without latest-mac.yml makes the Mac update check fail silently.
   create-release:
     runs-on: ubuntu-latest
     steps:
-      - run: gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" || gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+      - run: gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" || gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --draft --verify-tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,3 +66,11 @@ jobs:
           fi
           npx vite build
           npx electron-builder --publish always $extra
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --draft=false --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
