@@ -1,6 +1,5 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { fade } from 'svelte/transition';
   import type { Profile, Song, VerseNote } from '../shared/types';
   import { slideKeys, verseLabel, defaultLangStyle, credits, metaFor, sungLanguages } from '../shared/slides';
 
@@ -39,19 +38,48 @@
     meta ? [...new Set(profile.languages.map((l) => meta.title?.[l]).filter(Boolean))].join('  ·  ') : '',
   );
   let creditLines = $derived(meta ? credits(meta, profile.languages[0] ?? 'en') : ['', '']);
+  const h = $derived(profile.header);
+  // A song without an author or copyright MUST NOT show a lone verse count.
+  let hasCredits = $derived(!!meta && !!(meta.author || meta.composer || meta.copyright));
+  let headerStyle = $derived(meta?.header ?? 'full');
+  let showIdLine = $derived(
+    !!meta && (!!title || (headerStyle === 'full' && ((h.showNumber && meta.number != null) || (h.showCollection && !!meta.collectionKey)))),
+  );
+  let showCreditLine = $derived(headerStyle === 'full' && h.showCredits && hasCredits);
+  // An empty header MUST NOT take space or draw its rule.
+  let showHeader = $derived(h.show && headerStyle !== 'none' && (showIdLine || showCreditLine));
 
   // One size per song: every slide is fitted off-screen, the smallest wins.
   // Per-slide fitting made the text jump between verses.
   let measure = $state<HTMLDivElement>();
   let fontSize = $state(48);
+  // The lyrics wait until the song is fitted, so a new song never shows at the old size.
+  let fittedFor = $state<string | null>(null);
+
+  // A new song, or text after Blank, MUST cut in. Only verse changes inside a song fade.
+  let cut = $state(true);
+  // The server re-sends the live song on every change, so only a real switch counts.
+  let prev: { song: string | null; blank: boolean; slide: number } = { song: null, blank: true, slide: 0 };
+  $effect.pre(() => {
+    const id = song?.id ?? null;
+    if (id !== prev.song || (prev.blank && !blank)) {
+      cut = true;
+      fittedFor = null;
+    } else if (slideIndex !== prev.slide) cut = false;
+    prev = { song: id, blank, slide: slideIndex };
+  });
 
   async function fit() {
     await tick();
     const t = profile.text;
-    if (!t.autoFit || !measure) {
+    const id = song?.id ?? null;
+    if (!t.autoFit) {
       fontSize = t.size;
+      fittedFor = id;
       return;
     }
+    // Nothing on screen (Blank or no song): keep the last size.
+    if (!measure) return;
     const cols = [...measure.querySelectorAll<HTMLElement>('.inner')];
     const fits = (s: number) => {
       measure!.style.setProperty('--fs', s + 'px');
@@ -70,6 +98,7 @@
         else hi = mid;
       }
     fontSize = lo;
+    fittedFor = id;
   }
 
   $effect(() => {
@@ -84,7 +113,6 @@
   $effect(() => onfit?.(fontSize));
 
   const style = (l: string) => profile.text.perLanguage[l] ?? defaultLangStyle();
-  const h = $derived(profile.header);
 </script>
 
 {#snippet slideBody(k: string, hidden: boolean)}
@@ -92,6 +120,7 @@
   <div
     class="body"
     class:hidden
+    class:cut={!hidden && cut}
     style="{gridFor(ls)};gap:{profile.layout.gap}px;padding:{profile.layout.padding}px;{hidden ? '' : `--fs:${fontSize}px;`}animation-duration:{profile.transitionMs}ms"
   >
     {#each ls as l, i (l)}
@@ -139,31 +168,30 @@
   {#if !blank && song && key}
     <div
       class="slide"
-      transition:fade={{ duration: Math.max(profile.transitionMs, 400) }}
       class:shadow={profile.text.shadow}
       style:left="{profile.area?.x ?? 0}%"
       style:top="{profile.area?.y ?? 0}%"
       style:width="{profile.area?.w ?? 100}%"
       style:height="{profile.area?.h ?? 100}%"
     >
-      {#if h.show && meta}
+      {#if showHeader && meta}
         <header
           style:color={h.color}
           style:padding="{profile.layout.padding * 0.35}px {profile.layout.padding}px {profile.layout.padding * 0.25}px"
           style:border-bottom={h.rule ? `2px solid ${h.ruleColor}` : 'none'}
         >
           <div class="id">
-            {#if h.showCollection && meta.collectionKey}
+            {#if headerStyle === 'full' && h.showCollection && meta.collectionKey}
               <span class="ckey" style:font-size="{Math.max(h.numberSize * 0.24, h.creditsSize * 0.8)}px">{meta.collectionKey}</span>
             {/if}
-            {#if h.showNumber && meta.number != null}
+            {#if headerStyle === 'full' && h.showNumber && meta.number != null}
               <span class="num" style:font-size="{h.numberSize}px">{meta.number}</span>
             {/if}
-            {#if h.showTitle || meta.number == null}
-              <span class="title" style:font-size="{meta.number == null ? h.numberSize * 0.55 : h.creditsSize * 1.3}px">{title}</span>
+            {#if title && (h.showTitle || meta.number == null || headerStyle === 'title')}
+              <span class="title" style:font-size="{meta.number == null || headerStyle === 'title' ? h.numberSize * 0.55 : h.creditsSize * 1.3}px">{title}</span>
             {/if}
           </div>
-          {#if h.showCredits}
+          {#if showCreditLine}
             <div class="credits" style:font-size="{h.creditsSize}px">
               {#if creditLines[0]}<div>{creditLines[0]}</div>{/if}
               {#if creditLines[1]}<div>{creditLines[1]}</div>{/if}
@@ -173,9 +201,11 @@
       {/if}
 
       <div class="stage">
-        {#key `${song.id}:${slideIndex}`}
-          {@render slideBody(key, false)}
-        {/key}
+        {#if fittedFor === song.id}
+          {#key `${song.id}:${slideIndex}`}
+            {@render slideBody(key, false)}
+          {/key}
+        {/if}
         {#if profile.text.autoFit}
           <div class="measure" bind:this={measure} aria-hidden="true">
             <!-- The order repeats verses (a chorus); each MUST be measured once. -->
@@ -263,6 +293,9 @@
     inset: 0;
     visibility: hidden;
     pointer-events: none;
+  }
+  .body.cut {
+    animation: none;
   }
   .body.hidden {
     animation: none;
