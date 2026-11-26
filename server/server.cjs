@@ -32,7 +32,7 @@ function slideKeys(song) {
   return song.order.filter((k) => Object.values(song.lyrics).some((l) => l[k]?.length));
 }
 
-const META = ['title', 'number', 'collection', 'collectionKey', 'author', 'year', 'composer', 'copyright', 'key'];
+const META = ['title', 'number', 'collection', 'collectionKey', 'author', 'year', 'composer', 'copyright', 'key', 'header'];
 
 // A medley stores only its parts. Slide keys become "<part>:<verse>" so parts never collide.
 function resolveMedley(song, getRaw) {

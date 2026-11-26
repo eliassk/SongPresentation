@@ -2,7 +2,7 @@
   import { t } from '../shared/i18n.svelte';
   import { app, getSong, saveSong, deleteSong, songName } from './store.svelte';
   import { parseLyrics, formatLyrics } from '../shared/slides';
-  import type { Song } from '../shared/types';
+  import type { Song, SongHeader } from '../shared/types';
   import StImport from './StImport.svelte';
 
   let langs = $derived(app.state!.languages);
@@ -28,6 +28,7 @@
     composer: string;
     copyright: string;
     key: string;
+    header: SongHeader;
     title: Record<string, string>;
     text: Record<string, string>;
   }
@@ -49,6 +50,7 @@
       composer: s.composer ?? '',
       copyright: s.copyright ?? '',
       key: s.key ?? '',
+      header: s.header ?? 'full',
       title: { ...s.title },
       text: Object.fromEntries(langs.map((l) => [l.code, formatLyrics(s, l.code)])),
     };
@@ -57,7 +59,7 @@
 
   function newSong() {
     original = null;
-    draft = { number: '', collection: '', collectionKey: '', author: '', year: '', composer: '', copyright: '', key: '', title: {}, text: {} };
+    draft = { number: '', collection: '', collectionKey: '', author: '', year: '', composer: '', copyright: '', key: '', header: 'full', title: {}, text: {} };
     msg = '';
   }
 
@@ -82,6 +84,7 @@
       composer: draft.composer,
       copyright: draft.copyright,
       key: draft.key,
+      header: draft.header,
       title: Object.fromEntries(Object.entries(draft.title).filter(([, v]) => v)),
       order,
       lyrics,
@@ -140,6 +143,13 @@
           <label>{t("Year")} <input class="num" bind:value={draft.year} /></label>
           <label>{t("Composer")} <input bind:value={draft.composer} /></label>
           <label>Text © <input bind:value={draft.copyright} /></label>
+          <label>{t("Header on screen")}
+            <select bind:value={draft.header}>
+              <option value="full">{t("Full (number, title, credits)")}</option>
+              <option value="title">{t("Title only")}</option>
+              <option value="none">{t("None, lyrics only")}</option>
+            </select>
+          </label>
         </div>
         <p class="muted small">
           {t("Start each part with")} <code>[1]</code>, <code>[2]</code>, <code>[c]</code> {t("(chorus),")} <code>[b]</code> {t("(bridge).")}

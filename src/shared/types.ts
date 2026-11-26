@@ -12,6 +12,8 @@ export interface Song {
   composer?: string;
   copyright?: string;
   key?: string;
+  /** Header style on audience displays. "full" (default) follows the display profile. */
+  header?: SongHeader;
   /** Verse keys in play order. "c" is the chorus and MAY repeat. */
   order: string[];
   lyrics: Record<LangCode, Record<string, string[]>>;
@@ -23,12 +25,14 @@ export interface Song {
   sung?: Record<string, LangCode>;
 }
 
+export type SongHeader = 'full' | 'title' | 'none';
+
 export interface MedleyPart {
   songId: string;
   keys: string[];
 }
 
-export type SongMeta = Pick<Song, 'title' | 'number' | 'collection' | 'collectionKey' | 'author' | 'year' | 'composer' | 'copyright' | 'key'> & { songId: string };
+export type SongMeta = Pick<Song, 'title' | 'number' | 'collection' | 'collectionKey' | 'author' | 'year' | 'composer' | 'copyright' | 'key' | 'header'> & { songId: string };
 
 export interface SongSummary {
   id: string;
